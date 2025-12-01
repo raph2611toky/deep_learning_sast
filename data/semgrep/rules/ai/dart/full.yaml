@@ -1,0 +1,17 @@
+- rules:
+  - id: detect-gemini
+    languages:
+    - dart
+    message: 'Possibly found usage of AI: Gemini'
+    metadata:
+      category: maintainability
+      confidence: LOW
+      references:
+      - https://semgrep.dev/blog/2024/detecting-shadow-ai
+      technology:
+      - genAI
+      - LLMs
+    pattern-either:
+    - pattern: import 'package:google_generative_ai';
+    - pattern: final $MODEL = GenerativeModel(...);
+    severity: INFO

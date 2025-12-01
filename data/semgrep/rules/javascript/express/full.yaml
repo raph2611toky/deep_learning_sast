@@ -1,0 +1,4059 @@
+- rules:
+  - id: cors-misconfiguration
+    languages:
+    - javascript
+    - typescript
+    message: By letting user input control CORS parameters, there is a risk that software
+      does not properly verify that the source of data or communication is valid.
+      Use literal values for CORS settings.
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-346: Origin Validation Error'
+      impact: MEDIUM
+      likelihood: MEDIUM
+      owasp:
+      - A07:2021 - Identification and Authentication Failures
+      references:
+      - https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
+      subcategory:
+      - vuln
+      technology:
+      - express
+    mode: taint
+    pattern-sinks:
+    - patterns:
+      - pattern-either:
+        - pattern: $RES.set($HEADER, $X)
+        - pattern: $RES.header($HEADER, $X)
+        - pattern: $RES.setHeader($HEADER, $X)
+        - pattern: '$RES.set({$HEADER: $X}, ...)
+
+            '
+        - pattern: '$RES.writeHead($STATUS, {$HEADER: $X}, ...)
+
+            '
+      - focus-metavariable: $X
+      - metavariable-regex:
+          metavariable: $HEADER
+          regex: .*(Access-Control-Allow-Origin|access-control-allow-origin).*
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: function ... ($REQ, $RES) {...}
+        - pattern-inside: function ... ($REQ, $RES, $NEXT) {...}
+        - patterns:
+          - pattern-either:
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES) {...})
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES, $NEXT)
+                {...})
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(get|post|put|head|delete|options)$
+      - pattern-either:
+        - pattern: $REQ.query
+        - pattern: $REQ.body
+        - pattern: $REQ.params
+        - pattern: $REQ.cookies
+        - pattern: $REQ.headers
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '({ $REQ }: Request,$RES: Response, $NEXT: NextFunction)
+            =>
+
+            {...}
+
+            '
+        - pattern-inside: '({ $REQ }: Request,$RES: Response) => {...}
+
+            '
+      - focus-metavariable: $REQ
+      - pattern-either:
+        - pattern: params
+        - pattern: query
+        - pattern: cookies
+        - pattern: headers
+        - pattern: body
+    severity: WARNING
+- rules:
+  - id: express-wkhtmltoimage-injection
+    languages:
+    - javascript
+    - typescript
+    message: If unverified user data can reach the `phantom` methods it can result
+      in Server-Side Request Forgery vulnerabilities
+    metadata:
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-918: Server-Side Request Forgery (SSRF)'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      likelihood: MEDIUM
+      owasp:
+      - A10:2021 - Server-Side Request Forgery (SSRF)
+      references:
+      - https://www.npmjs.com/package/wkhtmltopdf
+      subcategory:
+      - vuln
+      technology:
+      - express
+    mode: taint
+    pattern-sinks:
+    - patterns:
+      - pattern: $WK.generate($SINK,...)
+      - focus-metavariable: $SINK
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: function ... ($REQ, $RES) {...}
+        - pattern-inside: function ... ($REQ, $RES, $NEXT) {...}
+        - patterns:
+          - pattern-either:
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES) {...})
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES, $NEXT)
+                {...})
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(get|post|put|head|delete|options)$
+      - pattern-either:
+        - pattern: $REQ.query
+        - pattern: $REQ.body
+        - pattern: $REQ.params
+        - pattern: $REQ.cookies
+        - pattern: $REQ.headers
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '({ $REQ }: Request,$RES: Response, $NEXT: NextFunction)
+            =>
+
+            {...}
+
+            '
+        - pattern-inside: '({ $REQ }: Request,$RES: Response) => {...}
+
+            '
+      - focus-metavariable: $REQ
+      - pattern-either:
+        - pattern: params
+        - pattern: query
+        - pattern: cookies
+        - pattern: headers
+        - pattern: body
+    severity: ERROR
+  - id: express-wkhtmltopdf-injection
+    languages:
+    - javascript
+    - typescript
+    message: If unverified user data can reach the `wkhtmltopdf` methods it can result
+      in Server-Side Request Forgery vulnerabilities
+    metadata:
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-918: Server-Side Request Forgery (SSRF)'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      likelihood: MEDIUM
+      owasp:
+      - A10:2021 - Server-Side Request Forgery (SSRF)
+      references:
+      - https://www.npmjs.com/package/wkhtmltopdf
+      subcategory:
+      - vuln
+      technology:
+      - express
+    mode: taint
+    pattern-sinks:
+    - patterns:
+      - pattern-inside: '$WK = require(''wkhtmltopdf'');
+
+          ...
+
+          '
+      - pattern: $WK($SINK,...)
+      - focus-metavariable: $SINK
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: function ... ($REQ, $RES) {...}
+        - pattern-inside: function ... ($REQ, $RES, $NEXT) {...}
+        - patterns:
+          - pattern-either:
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES) {...})
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES, $NEXT)
+                {...})
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(get|post|put|head|delete|options)$
+      - pattern-either:
+        - pattern: $REQ.query
+        - pattern: $REQ.body
+        - pattern: $REQ.params
+        - pattern: $REQ.cookies
+        - pattern: $REQ.headers
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '({ $REQ }: Request,$RES: Response, $NEXT: NextFunction)
+            =>
+
+            {...}
+
+            '
+        - pattern-inside: '({ $REQ }: Request,$RES: Response) => {...}
+
+            '
+      - focus-metavariable: $REQ
+      - pattern-either:
+        - pattern: params
+        - pattern: query
+        - pattern: cookies
+        - pattern: headers
+        - pattern: body
+    severity: ERROR
+- rules:
+  - id: express-xml2json-xxe
+    languages:
+    - javascript
+    - typescript
+    message: Make sure that unverified user data can not reach the XML Parser, as
+      it can result in XML External or Internal Entity (XXE) Processing vulnerabilities
+    metadata:
+      asvs:
+        control_id: 5.5.2 Insecue XML Deserialization
+        control_url: https://github.com/OWASP/ASVS/blob/master/4.0/en/0x13-V5-Validation-Sanitization-Encoding.md#v55-deserialization-prevention
+        section: V5 Validation, Sanitization and Encoding
+        version: '4'
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-611: Improper Restriction of XML External Entity Reference'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      likelihood: MEDIUM
+      owasp:
+      - A04:2017 - XML External Entities (XXE)
+      - A05:2021 - Security Misconfiguration
+      references:
+      - https://www.npmjs.com/package/xml2json
+      subcategory:
+      - vuln
+      technology:
+      - express
+    mode: taint
+    pattern-sinks:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: 'require(''xml2json'');
+
+            ...
+
+            '
+        - pattern-inside: 'import ''xml2json'';
+
+            ...
+
+            '
+      - pattern: $EXPAT.toJson($SINK,...)
+      - focus-metavariable: $SINK
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: function ... ($REQ, $RES) {...}
+        - pattern-inside: function ... ($REQ, $RES, $NEXT) {...}
+        - patterns:
+          - pattern-either:
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES) {...})
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES, $NEXT)
+                {...})
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(get|post|put|head|delete|options)$
+      - pattern-either:
+        - pattern: $REQ.query
+        - pattern: $REQ.body
+        - pattern: $REQ.params
+        - pattern: $REQ.cookies
+        - pattern: $REQ.headers
+        - pattern: $REQ.files.$ANYTHING.data.toString('utf8')
+        - pattern: $REQ.files.$ANYTHING['data'].toString('utf8')
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '({ $REQ }: Request,$RES: Response, $NEXT: NextFunction)
+            =>
+
+            {...}
+
+            '
+        - pattern-inside: '({ $REQ }: Request,$RES: Response) => {...}
+
+            '
+      - focus-metavariable: $REQ
+      - pattern-either:
+        - pattern: params
+        - pattern: query
+        - pattern: cookies
+        - pattern: headers
+        - pattern: body
+        - pattern: files.$ANYTHING.data.toString('utf8')
+        - pattern: files.$ANYTHING['data'].toString('utf8')
+    severity: ERROR
+- rules:
+  - id: express-data-exfiltration
+    languages:
+    - javascript
+    - typescript
+    message: Depending on the context, user control data in `Object.assign` can cause
+      web response to include data that it should not have or can lead to a mass assignment
+      vulnerability.
+    metadata:
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-915: Improperly Controlled Modification of Dynamically-Determined Object
+        Attributes'
+      impact: MEDIUM
+      likelihood: LOW
+      owasp:
+      - A08:2021 - Software and Data Integrity Failures
+      references:
+      - https://en.wikipedia.org/wiki/Mass_assignment_vulnerability
+      - https://cheatsheetseries.owasp.org/cheatsheets/Mass_Assignment_Cheat_Sheet.html
+      subcategory:
+      - audit
+      technology:
+      - express
+    mode: taint
+    pattern-sinks:
+    - pattern: Object.assign(...)
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: function ... ($REQ, $RES) {...}
+        - pattern-inside: function ... ($REQ, $RES, $NEXT) {...}
+        - patterns:
+          - pattern-either:
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES) {...})
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES, $NEXT)
+                {...})
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(get|post|put|head|delete|options)$
+      - pattern-either:
+        - pattern: $REQ.query
+        - pattern: $REQ.body
+        - pattern: $REQ.params
+        - pattern: $REQ.cookies
+        - pattern: $REQ.headers
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '({ $REQ }: Request,$RES: Response, $NEXT: NextFunction)
+            =>
+
+            {...}
+
+            '
+        - pattern-inside: '({ $REQ }: Request,$RES: Response) => {...}
+
+            '
+      - focus-metavariable: $REQ
+      - pattern-either:
+        - pattern: params
+        - pattern: query
+        - pattern: cookies
+        - pattern: headers
+        - pattern: body
+    severity: WARNING
+- rules:
+  - id: express-jwt-hardcoded-secret
+    languages:
+    - javascript
+    - typescript
+    message: A hard-coded credential was detected. It is not recommended to store
+      credentials in source-code, as this risks secrets being leaked and used by either
+      an internal or external malicious adversary. It is recommended to use environment
+      variables to securely provide credentials or retrieve credentials from a secure
+      vault or HSM (Hardware Security Module).
+    metadata:
+      category: security
+      confidence: HIGH
+      cwe:
+      - 'CWE-798: Use of Hard-coded Credentials'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      interfile: true
+      likelihood: HIGH
+      owasp:
+      - A07:2021 - Identification and Authentication Failures
+      references:
+      - https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html
+      subcategory:
+      - audit
+      technology:
+      - express
+      - secrets
+    options:
+      interfile: true
+    patterns:
+    - pattern-either:
+      - pattern-inside: '$JWT = require(''express-jwt'');
+
+          ...
+
+          '
+      - pattern-inside: 'import $JWT from ''express-jwt'';
+
+          ...
+
+          '
+      - pattern-inside: 'import * as $JWT from ''express-jwt'';
+
+          ...
+
+          '
+      - pattern-inside: 'import { ..., $JWT, ... } from ''express-jwt'';
+
+          ...
+
+          '
+    - pattern-either:
+      - pattern: '$JWT({...,secret: "$Y",...},...)
+
+          '
+      - pattern: '$OPTS = "$Y";
+
+          ...
+
+          $JWT({...,secret: $OPTS},...);
+
+          '
+    - focus-metavariable: $Y
+    severity: WARNING
+- rules:
+  - id: express-sandbox-code-injection
+    languages:
+    - javascript
+    - typescript
+    message: Make sure that unverified user data can not reach `sandbox`.
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-94: Improper Control of Generation of Code (''Code Injection'')'
+      cwe2022-top25: true
+      impact: MEDIUM
+      likelihood: MEDIUM
+      owasp:
+      - A03:2021 - Injection
+      references:
+      - https://cheatsheetseries.owasp.org/cheatsheets/Injection_Prevention_Cheat_Sheet.html
+      subcategory:
+      - vuln
+      technology:
+      - express
+    mode: taint
+    pattern-sinks:
+    - patterns:
+      - pattern-inside: '$SANDBOX = require(''sandbox'');
+
+          ...
+
+          '
+      - pattern-either:
+        - patterns:
+          - pattern-inside: '$S = new $SANDBOX(...);
+
+              ...
+
+              '
+          - pattern: '$S.run(...)
+
+              '
+        - pattern: 'new $SANDBOX($OPTS).run(...)
+
+            '
+        - pattern: new $SANDBOX().run(...)
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: function ... ($REQ, $RES) {...}
+        - pattern-inside: function ... ($REQ, $RES, $NEXT) {...}
+        - patterns:
+          - pattern-either:
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES) {...})
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES, $NEXT)
+                {...})
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(get|post|put|head|delete|options)$
+      - pattern-either:
+        - pattern: $REQ.query
+        - pattern: $REQ.body
+        - pattern: $REQ.params
+        - pattern: $REQ.cookies
+        - pattern: $REQ.headers
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '({ $REQ }: Request,$RES: Response, $NEXT: NextFunction)
+            =>
+
+            {...}
+
+            '
+        - pattern-inside: '({ $REQ }: Request,$RES: Response) => {...}
+
+            '
+      - focus-metavariable: $REQ
+      - pattern-either:
+        - pattern: params
+        - pattern: query
+        - pattern: cookies
+        - pattern: headers
+        - pattern: body
+    severity: ERROR
+- rules:
+  - id: express-insecure-template-usage
+    languages:
+    - javascript
+    - typescript
+    message: User data from `$REQ` is being compiled into the template, which can
+      lead to a Server Side Template Injection (SSTI) vulnerability.
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-1336: Improper Neutralization of Special Elements Used in a Template
+        Engine'
+      impact: MEDIUM
+      interfile: true
+      likelihood: MEDIUM
+      owasp:
+      - A03:2021 - Injection
+      - A01:2017 - Injection
+      references:
+      - https://cheatsheetseries.owasp.org/cheatsheets/Injection_Prevention_Cheat_Sheet.html
+      source_rule_url:
+      - https://github.com/github/codeql/blob/2ba2642c7ab29b9eedef33bcc2b8cd1d203d0c10/javascript/ql/test/query-tests/Security/CWE-094/CodeInjection/template-sinks.js
+      subcategory:
+      - vuln
+      technology:
+      - javascript
+      - typescript
+      - express
+      - pug
+      - jade
+      - dot
+      - ejs
+      - nunjucks
+      - lodash
+      - handlbars
+      - mustache
+      - hogan.js
+      - eta
+      - squirrelly
+    mode: taint
+    options:
+      interfile: true
+    pattern-propagators:
+    - from: $E
+      pattern: $MODEL.$FIND($E).then((...,$S,...)=>{...})
+      to: $S
+    pattern-sinks:
+    - pattern-either:
+      - patterns:
+        - pattern-either:
+          - pattern-inside: '$PUG = require(''pug'')
+
+              ...
+
+              '
+          - pattern-inside: 'import * as $PUG from ''pug''
+
+              ...
+
+              '
+          - pattern-inside: '$PUG = require(''jade'')
+
+              ...
+
+              '
+          - pattern-inside: 'import * as $PUG from ''jade''
+
+              ...
+
+              '
+        - pattern-either:
+          - pattern: $PUG.compile(...)
+          - pattern: $PUG.compileClient(...)
+          - pattern: $PUG.compileClientWithDependenciesTracked(...)
+          - pattern: $PUG.render(...)
+      - patterns:
+        - pattern-either:
+          - pattern-inside: '$PUG = require(''dot'')
+
+              ...
+
+              '
+          - pattern-inside: 'import * as $PUG from ''dot''
+
+              ...
+
+              '
+        - pattern-either:
+          - pattern: $PUG.template(...)
+          - pattern: $PUG.compile(...)
+      - patterns:
+        - pattern-either:
+          - pattern-inside: '$PUG = require(''ejs'')
+
+              ...
+
+              '
+          - pattern-inside: 'import * as $PUG from ''ejs''
+
+              ...
+
+              '
+        - pattern-either:
+          - pattern: $PUG.render(...)
+      - patterns:
+        - pattern-either:
+          - pattern-inside: '$PUG = require(''nunjucks'')
+
+              ...
+
+              '
+          - pattern-inside: 'import * as $PUG from ''nunjucks''
+
+              ...
+
+              '
+        - pattern-either:
+          - pattern: $PUG.renderString(...)
+      - patterns:
+        - pattern-either:
+          - pattern-inside: '$PUG = require(''lodash'')
+
+              ...
+
+              '
+          - pattern-inside: 'import * as $PUG from ''lodash''
+
+              ...
+
+              '
+        - pattern-either:
+          - pattern: $PUG.template(...)
+      - patterns:
+        - pattern-either:
+          - pattern-inside: '$PUG = require(''mustache'')
+
+              ...
+
+              '
+          - pattern-inside: 'import * as $PUG from ''mustache''
+
+              ...
+
+              '
+          - pattern-inside: '$PUG = require(''eta'')
+
+              ...
+
+              '
+          - pattern-inside: 'import * as $PUG from ''eta''
+
+              ...
+
+              '
+          - pattern-inside: '$PUG = require(''squirrelly'')
+
+              ...
+
+              '
+          - pattern-inside: 'import * as $PUG from ''squirrelly''
+
+              ...
+
+              '
+        - pattern-either:
+          - pattern: $PUG.render(...)
+      - patterns:
+        - pattern-either:
+          - pattern-inside: '$PUG = require(''hogan.js'')
+
+              ...
+
+              '
+          - pattern-inside: 'import * as $PUG from ''hogan.js''
+
+              ...
+
+              '
+          - pattern-inside: '$PUG = require(''handlebars'')
+
+              ...
+
+              '
+          - pattern-inside: 'import * as $PUG from ''handlebars''
+
+              ...
+
+              '
+        - pattern-either:
+          - pattern: $PUG.compile(...)
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: function ... ($REQ, $RES) {...}
+        - pattern-inside: function ... ($REQ, $RES, $NEXT) {...}
+        - patterns:
+          - pattern-either:
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES) {...})
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES, $NEXT)
+                {...})
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(get|post|put|head|delete|options)$
+      - pattern-either:
+        - pattern: $REQ.query
+        - pattern: $REQ.body
+        - pattern: $REQ.params
+        - pattern: $REQ.cookies
+        - pattern: $REQ.headers
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '({ $REQ }: Request,$RES: Response, $NEXT: NextFunction)
+            =>
+
+            {...}
+
+            '
+        - pattern-inside: '({ $REQ }: Request,$RES: Response) => {...}
+
+            '
+      - focus-metavariable: $REQ
+      - pattern-either:
+        - pattern: params
+        - pattern: query
+        - pattern: cookies
+        - pattern: headers
+        - pattern: body
+    severity: WARNING
+- rules:
+  - id: express-phantom-injection
+    languages:
+    - javascript
+    - typescript
+    message: If unverified user data can reach the `phantom` methods it can result
+      in Server-Side Request Forgery vulnerabilities
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-918: Server-Side Request Forgery (SSRF)'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      likelihood: MEDIUM
+      owasp:
+      - A10:2021 - Server-Side Request Forgery (SSRF)
+      references:
+      - https://phantomjs.org/page-automation.html
+      subcategory:
+      - vuln
+      technology:
+      - express
+    mode: taint
+    pattern-sinks:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: 'require(''phantom'');
+
+            ...
+
+            '
+        - pattern-inside: 'import ''phantom'';
+
+            ...
+
+            '
+      - pattern-either:
+        - pattern: $PAGE.open($SINK,...)
+        - pattern: $PAGE.setContent($SINK,...)
+        - pattern: $PAGE.openUrl($SINK,...)
+        - pattern: $PAGE.evaluateJavaScript($SINK,...)
+        - pattern: $PAGE.property("content",$SINK,...)
+      - focus-metavariable: $SINK
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: function ... ($REQ, $RES) {...}
+        - pattern-inside: function ... ($REQ, $RES, $NEXT) {...}
+        - patterns:
+          - pattern-either:
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES) {...})
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES, $NEXT)
+                {...})
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(get|post|put|head|delete|options)$
+      - pattern-either:
+        - pattern: $REQ.query
+        - pattern: $REQ.body
+        - pattern: $REQ.params
+        - pattern: $REQ.cookies
+        - pattern: $REQ.headers
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '({ $REQ }: Request,$RES: Response, $NEXT: NextFunction)
+            =>
+
+            {...}
+
+            '
+        - pattern-inside: '({ $REQ }: Request,$RES: Response) => {...}
+
+            '
+      - focus-metavariable: $REQ
+      - pattern-either:
+        - pattern: params
+        - pattern: query
+        - pattern: cookies
+        - pattern: headers
+        - pattern: body
+    severity: ERROR
+- rules:
+  - id: require-request
+    languages:
+    - javascript
+    - typescript
+    message: If an attacker controls the x in require(x) then they can cause code
+      to load that was not intended to run on the server.
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-706: Use of Incorrectly-Resolved Name or Reference'
+      impact: MEDIUM
+      interfile: true
+      likelihood: MEDIUM
+      owasp:
+      - A01:2021 - Broken Access Control
+      references:
+      - https://github.com/google/node-sec-roadmap/blob/master/chapter-2/dynamism.md#dynamism-when-you-need-it
+      source-rule-url: https://nodesecroadmap.fyi/chapter-1/threat-UIR.html
+      subcategory:
+      - vuln
+      technology:
+      - express
+    mode: taint
+    options:
+      interfile: true
+    pattern-sinks:
+    - patterns:
+      - pattern: require($SINK)
+      - focus-metavariable: $SINK
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: function ... ($REQ, $RES) {...}
+        - pattern-inside: function ... ($REQ, $RES, $NEXT) {...}
+        - patterns:
+          - pattern-either:
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES) {...})
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES, $NEXT)
+                {...})
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(get|post|put|head|delete|options)$
+      - pattern-either:
+        - pattern: $REQ.query
+        - pattern: $REQ.body
+        - pattern: $REQ.params
+        - pattern: $REQ.cookies
+        - pattern: $REQ.headers
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '({ $REQ }: Request,$RES: Response, $NEXT: NextFunction)
+            =>
+
+            {...}
+
+            '
+        - pattern-inside: '({ $REQ }: Request,$RES: Response) => {...}
+
+            '
+      - focus-metavariable: $REQ
+      - pattern-either:
+        - pattern: params
+        - pattern: query
+        - pattern: cookies
+        - pattern: headers
+        - pattern: body
+    severity: ERROR
+- rules:
+  - id: express-expat-xxe
+    languages:
+    - javascript
+    - typescript
+    message: Make sure that unverified user data can not reach the XML Parser, as
+      it can result in XML External or Internal Entity (XXE) Processing vulnerabilities.
+    metadata:
+      asvs:
+        control_id: 5.5.2 Insecue XML Deserialization
+        control_url: https://github.com/OWASP/ASVS/blob/master/4.0/en/0x13-V5-Validation-Sanitization-Encoding.md#v55-deserialization-prevention
+        section: V5 Validation, Sanitization and Encoding
+        version: '4'
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-611: Improper Restriction of XML External Entity Reference'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      interfile: true
+      likelihood: MEDIUM
+      owasp:
+      - A04:2017 - XML External Entities (XXE)
+      - A05:2021 - Security Misconfiguration
+      references:
+      - https://github.com/astro/node-expat
+      subcategory:
+      - vuln
+      technology:
+      - express
+    mode: taint
+    options:
+      interfile: true
+    pattern-sinks:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '$XML = require(''node-expat'')
+
+            ...
+
+            '
+        - pattern-inside: 'import $XML from ''node-expat''
+
+            ...
+
+            '
+        - pattern-inside: 'import * as $XML from ''node-expat''
+
+            ...
+
+            '
+      - pattern-either:
+        - pattern-inside: '$PARSER = new $XML.Parser(...);
+
+            ...
+
+            '
+      - pattern-either:
+        - pattern: $PARSER.parse($QUERY)
+        - pattern: $PARSER.write($QUERY)
+      - focus-metavariable: $QUERY
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: function ... ($REQ, $RES) {...}
+        - pattern-inside: function ... ($REQ, $RES, $NEXT) {...}
+        - patterns:
+          - pattern-either:
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES) {...})
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES, $NEXT)
+                {...})
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(get|post|put|head|delete|options)$
+      - pattern-either:
+        - pattern: $REQ.query
+        - pattern: $REQ.body
+        - pattern: $REQ.params
+        - pattern: $REQ.cookies
+        - pattern: $REQ.headers
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '({ $REQ }: Request,$RES: Response, $NEXT: NextFunction)
+            =>
+
+            {...}
+
+            '
+        - pattern-inside: '({ $REQ }: Request,$RES: Response) => {...}
+
+            '
+      - focus-metavariable: $REQ
+      - pattern-either:
+        - pattern: params
+        - pattern: query
+        - pattern: cookies
+        - pattern: headers
+        - pattern: body
+    severity: ERROR
+- rules:
+  - id: x-frame-options-misconfiguration
+    languages:
+    - javascript
+    - typescript
+    message: By letting user input control `X-Frame-Options` header, there is a risk
+      that software does not properly verify whether or not a browser should be allowed
+      to render a page in an `iframe`.
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-451: User Interface (UI) Misrepresentation of Critical Information'
+      impact: MEDIUM
+      likelihood: MEDIUM
+      owasp:
+      - A04:2021 - Insecure Design
+      references:
+      - https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options
+      subcategory:
+      - vuln
+      technology:
+      - express
+    mode: taint
+    pattern-sinks:
+    - patterns:
+      - pattern-either:
+        - pattern: $RES.set($HEADER, ...)
+        - pattern: $RES.header($HEADER, ...)
+        - pattern: $RES.setHeader($HEADER, ...)
+        - pattern: '$RES.set({$HEADER: ...}, ...)
+
+            '
+        - pattern: '$RES.writeHead($STATUS, {$HEADER: ...}, ...)
+
+            '
+      - metavariable-regex:
+          metavariable: $HEADER
+          regex: .*(X-Frame-Options|x-frame-options).*
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: function ... ($REQ, $RES) {...}
+        - pattern-inside: function ... ($REQ, $RES, $NEXT) {...}
+        - patterns:
+          - pattern-either:
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES) {...})
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES, $NEXT)
+                {...})
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(get|post|put|head|delete|options)$
+      - pattern-either:
+        - pattern: $REQ.query
+        - pattern: $REQ.body
+        - pattern: $REQ.params
+        - pattern: $REQ.cookies
+        - pattern: $REQ.headers
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '({ $REQ }: Request,$RES: Response, $NEXT: NextFunction)
+            =>
+
+            {...}
+
+            '
+        - pattern-inside: '({ $REQ }: Request,$RES: Response) => {...}
+
+            '
+      - focus-metavariable: $REQ
+      - pattern-either:
+        - pattern: params
+        - pattern: query
+        - pattern: cookies
+        - pattern: headers
+        - pattern: body
+    severity: WARNING
+- rules:
+  - id: express-vm-injection
+    languages:
+    - javascript
+    - typescript
+    message: Make sure that unverified user data can not reach `$VM`.
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-94: Improper Control of Generation of Code (''Code Injection'')'
+      cwe2022-top25: true
+      impact: MEDIUM
+      likelihood: MEDIUM
+      owasp:
+      - A03:2021 - Injection
+      references:
+      - https://cheatsheetseries.owasp.org/cheatsheets/Injection_Prevention_Cheat_Sheet.html
+      subcategory:
+      - vuln
+      technology:
+      - express
+    mode: taint
+    pattern-sinks:
+    - patterns:
+      - pattern-inside: '$VM = require(''vm'');
+
+          ...
+
+          '
+      - pattern-either:
+        - pattern: '$VM.runInContext(...)
+
+            '
+        - pattern: '$VM.runInNewContext(...)
+
+            '
+        - pattern: '$VM.compileFunction(...)
+
+            '
+        - pattern: '$VM.runInThisContext(...)
+
+            '
+        - pattern: new $VM.Script(...)
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: function ... ($REQ, $RES) {...}
+        - pattern-inside: function ... ($REQ, $RES, $NEXT) {...}
+        - patterns:
+          - pattern-either:
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES) {...})
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES, $NEXT)
+                {...})
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(get|post|put|head|delete|options)$
+      - pattern-either:
+        - pattern: $REQ.query
+        - pattern: $REQ.body
+        - pattern: $REQ.params
+        - pattern: $REQ.cookies
+        - pattern: $REQ.headers
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '({ $REQ }: Request,$RES: Response, $NEXT: NextFunction)
+            =>
+
+            {...}
+
+            '
+        - pattern-inside: '({ $REQ }: Request,$RES: Response) => {...}
+
+            '
+      - focus-metavariable: $REQ
+      - pattern-either:
+        - pattern: params
+        - pattern: query
+        - pattern: cookies
+        - pattern: headers
+        - pattern: body
+    severity: ERROR
+- rules:
+  - id: express-vm2-injection
+    languages:
+    - javascript
+    - typescript
+    message: Make sure that unverified user data can not reach `vm2`.
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-94: Improper Control of Generation of Code (''Code Injection'')'
+      cwe2022-top25: true
+      impact: MEDIUM
+      likelihood: MEDIUM
+      owasp:
+      - A03:2021 - Injection
+      references:
+      - https://cheatsheetseries.owasp.org/cheatsheets/Injection_Prevention_Cheat_Sheet.html
+      subcategory:
+      - vuln
+      technology:
+      - express
+    mode: taint
+    pattern-sinks:
+    - patterns:
+      - pattern-inside: 'require(''vm2'')
+
+          ...
+
+          '
+      - pattern-either:
+        - patterns:
+          - pattern-either:
+            - pattern-inside: '$VM = new VM(...)
+
+                ...
+
+                '
+            - pattern-inside: '$VM = new NodeVM(...)
+
+                ...
+
+                '
+          - pattern: '$VM.run(...)
+
+              '
+        - pattern: 'new VM(...).run(...)
+
+            '
+        - pattern: 'new NodeVM(...).run(...)
+
+            '
+        - pattern: 'new VMScript(...)
+
+            '
+        - pattern: 'new VM(...)
+
+            '
+        - pattern: new NodeVM(...)
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: function ... ($REQ, $RES) {...}
+        - pattern-inside: function ... ($REQ, $RES, $NEXT) {...}
+        - patterns:
+          - pattern-either:
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES) {...})
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES, $NEXT)
+                {...})
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(get|post|put|head|delete|options)$
+      - pattern-either:
+        - pattern: $REQ.query
+        - pattern: $REQ.body
+        - pattern: $REQ.params
+        - pattern: $REQ.cookies
+        - pattern: $REQ.headers
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '({ $REQ }: Request,$RES: Response, $NEXT: NextFunction)
+            =>
+
+            {...}
+
+            '
+        - pattern-inside: '({ $REQ }: Request,$RES: Response) => {...}
+
+            '
+      - focus-metavariable: $REQ
+      - pattern-either:
+        - pattern: params
+        - pattern: query
+        - pattern: cookies
+        - pattern: headers
+        - pattern: body
+    severity: WARNING
+- rules:
+  - id: express-puppeteer-injection
+    languages:
+    - javascript
+    - typescript
+    message: If unverified user data can reach the `puppeteer` methods it can result
+      in Server-Side Request Forgery vulnerabilities
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-918: Server-Side Request Forgery (SSRF)'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      likelihood: MEDIUM
+      owasp:
+      - A10:2021 - Server-Side Request Forgery (SSRF)
+      references:
+      - https://pptr.dev/api/puppeteer.page
+      subcategory:
+      - vuln
+      technology:
+      - express
+    mode: taint
+    pattern-sinks:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: 'require(''puppeteer'');
+
+            ...
+
+            '
+        - pattern-inside: 'import ''puppeteer'';
+
+            ...
+
+            '
+      - pattern-either:
+        - pattern: $PAGE.goto($SINK,...)
+        - pattern: $PAGE.setContent($SINK,...)
+        - pattern: $PAGE.evaluate($SINK,...)
+        - pattern: $PAGE.evaluate($CODE,$SINK,...)
+        - pattern: $PAGE.evaluateHandle($SINK,...)
+        - pattern: $PAGE.evaluateHandle($CODE,$SINK,...)
+        - pattern: $PAGE.evaluateOnNewDocument($SINK,...)
+        - pattern: $PAGE.evaluateOnNewDocument($CODE,$SINK,...)
+      - focus-metavariable: $SINK
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: function ... ($REQ, $RES) {...}
+        - pattern-inside: function ... ($REQ, $RES, $NEXT) {...}
+        - patterns:
+          - pattern-either:
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES) {...})
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES, $NEXT)
+                {...})
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(get|post|put|head|delete|options)$
+      - pattern-either:
+        - pattern: $REQ.query
+        - pattern: $REQ.body
+        - pattern: $REQ.params
+        - pattern: $REQ.cookies
+        - pattern: $REQ.headers
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '({ $REQ }: Request,$RES: Response, $NEXT: NextFunction)
+            =>
+
+            {...}
+
+            '
+        - pattern-inside: '({ $REQ }: Request,$RES: Response) => {...}
+
+            '
+      - focus-metavariable: $REQ
+      - pattern-either:
+        - pattern: params
+        - pattern: query
+        - pattern: cookies
+        - pattern: headers
+        - pattern: body
+    severity: ERROR
+- rules:
+  - id: tainted-sql-string
+    languages:
+    - javascript
+    - typescript
+    message: Detected user input used to manually construct a SQL string. This is
+      usually bad practice because manual construction could accidentally result in
+      a SQL injection. An attacker could use a SQL injection to steal or modify contents
+      of the database. Instead, use a parameterized query which is available by default
+      in most database engines. Alternatively, consider using an object-relational
+      mapper (ORM) such as Sequelize which will protect your queries.
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-89: Improper Neutralization of Special Elements used in an SQL Command
+        (''SQL Injection'')'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      likelihood: HIGH
+      owasp:
+      - A01:2017 - Injection
+      - A03:2021 - Injection
+      references:
+      - https://owasp.org/www-community/attacks/SQL_Injection
+      subcategory:
+      - vuln
+      technology:
+      - express
+    mode: taint
+    pattern-sinks:
+    - patterns:
+      - pattern-either:
+        - patterns:
+          - pattern-either:
+            - pattern-inside: '"$SQLSTR" + $EXPR
+
+                '
+            - pattern-inside: '"$SQLSTR".concat($EXPR)
+
+                '
+            - pattern: util.format($SQLSTR, $EXPR)
+            - pattern: '`$SQLSTR${$EXPR}...`
+
+                '
+          - metavariable-regex:
+              metavariable: $SQLSTR
+              regex: .*\b(?i)(select|delete|insert|create|update\s+.+\sset|alter|drop)\b.*
+      - focus-metavariable: $EXPR
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: function ... (...,$REQ, ...) {...}
+      - pattern-either:
+        - pattern: $REQ.query
+        - pattern: $REQ.body
+        - pattern: $REQ.params
+        - pattern: $REQ.cookies
+        - pattern: $REQ.headers
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '(...,{ $REQ }: Request,...) => {...}
+
+            '
+        - pattern-inside: '(...,{ $REQ }: $EXPRESS.Request,...) => {...}
+
+            '
+      - focus-metavariable: $REQ
+      - pattern-either:
+        - pattern: params
+        - pattern: query
+        - pattern: cookies
+        - pattern: headers
+        - pattern: body
+    severity: ERROR
+- rules:
+  - id: raw-html-format
+    languages:
+    - javascript
+    - typescript
+    message: User data flows into the host portion of this manually-constructed HTML.
+      This can introduce a Cross-Site-Scripting (XSS) vulnerability if this comes
+      from user-provided input. Consider using a sanitization library such as DOMPurify
+      to sanitize the HTML within.
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-79: Improper Neutralization of Input During Web Page Generation (''Cross-site
+        Scripting'')'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      likelihood: HIGH
+      owasp:
+      - A07:2017 - Cross-Site Scripting (XSS)
+      - A03:2021 - Injection
+      references:
+      - https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html
+      subcategory:
+      - vuln
+      technology:
+      - express
+    mode: taint
+    pattern-sinks:
+    - patterns:
+      - pattern-either:
+        - patterns:
+          - pattern-either:
+            - pattern: '"$HTMLSTR" + $EXPR'
+            - pattern: '"$HTMLSTR".concat(...)'
+            - pattern: util.format($HTMLSTR, ...)
+          - metavariable-pattern:
+              language: generic
+              metavariable: $HTMLSTR
+              pattern: <$TAG ...
+        - patterns:
+          - pattern: '`...`
+
+              '
+          - pattern-regex: '.*<\w+.*
+
+              '
+      requires: (EXPRESS and not CLEAN) or (EXPRESSTS and not CLEAN)
+    pattern-sources:
+    - label: EXPRESS
+      patterns:
+      - pattern-either:
+        - pattern-inside: function ... ($REQ, $RES) {...}
+        - pattern-inside: function ... ($REQ, $RES, $NEXT) {...}
+        - patterns:
+          - pattern-either:
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES) {...})
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES, $NEXT)
+                {...})
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(get|post|put|head|delete|options)$
+      - pattern-either:
+        - pattern: $REQ.query
+        - pattern: $REQ.body
+        - pattern: $REQ.params
+        - pattern: $REQ.cookies
+        - pattern: $REQ.headers
+    - label: EXPRESSTS
+      patterns:
+      - pattern-either:
+        - pattern-inside: '({ $REQ }: Request,$RES: Response, $NEXT: NextFunction)
+            =>
+
+            {...}
+
+            '
+        - pattern-inside: '({ $REQ }: Request,$RES: Response) => {...}
+
+            '
+      - focus-metavariable: $REQ
+      - pattern-either:
+        - pattern: params
+        - pattern: query
+        - pattern: cookies
+        - pattern: headers
+        - pattern: body
+    - by-side-effect: true
+      label: CLEAN
+      patterns:
+      - pattern-either:
+        - pattern: $A($SOURCE)
+        - pattern: $SANITIZE. ... .$A($SOURCE)
+        - pattern: $A. ... .$SANITIZE($SOURCE)
+      - focus-metavariable: $SOURCE
+      - metavariable-regex:
+          metavariable: $A
+          regex: (?i)(.*valid|.*sanitiz)
+    severity: WARNING
+- rules:
+  - id: express-libxml-vm-noent
+    languages:
+    - javascript
+    - typescript
+    message: Detected use of parseXml() function with the `noent` field set to `true`.
+      This can lead to an XML External Entities (XXE) attack if untrusted data is
+      passed into it.
+    metadata:
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-611: Improper Restriction of XML External Entity Reference'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: HIGH
+      likelihood: LOW
+      owasp:
+      - A04:2017 - XML External Entities (XXE)
+      - A05:2021 - Security Misconfiguration
+      references:
+      - https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html
+      subcategory:
+      - audit
+      technology:
+      - express
+    patterns:
+    - pattern-either:
+      - patterns:
+        - pattern-either:
+          - pattern: $VM.runInContext("$CMD", ...)
+          - pattern: $VM.runInNewContext("$CMD", ...)
+          - pattern: $VM.runInThisContext("$CMD", ...)
+          - pattern: $VM.compileFunction("$CMD", ...)
+        - metavariable-pattern:
+            language: typescript
+            metavariable: $CMD
+            pattern-either:
+            - pattern: '$LIBXML.parseXml($DATA, {..., noent: true, ...}, ...)
+
+                '
+            - patterns:
+              - pattern-inside: '$OPTS = {..., noent: true, ...}
+
+                  ...
+
+                  '
+              - pattern: $LIBXML.parseXml( $DATA, $OPTS )
+      - pattern: '$LIBXML.parseXml($DATA, {..., noent: true, ...}, ...)
+
+          '
+      - patterns:
+        - pattern-inside: '$OPTS = {..., noent: true, ...}
+
+            ...
+
+            '
+        - pattern: $LIBXML.parseXml( $DATA, $OPTS )
+    severity: WARNING
+- rules:
+  - id: express-third-party-object-deserialization
+    languages:
+    - javascript
+    - typescript
+    message: The following function call $SER.$FUNC accepts user controlled data which
+      can result in Remote Code Execution (RCE) through Object Deserialization. It
+      is recommended to use secure data processing alternatives such as JSON.parse()
+      and Buffer.from().
+    metadata:
+      category: security
+      confidence: HIGH
+      cwe:
+      - 'CWE-502: Deserialization of Untrusted Data'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: HIGH
+      interfile: true
+      likelihood: HIGH
+      owasp:
+      - A08:2017 - Insecure Deserialization
+      - A08:2021 - Software and Data Integrity Failures
+      references:
+      - https://cheatsheetseries.owasp.org/cheatsheets/Deserialization_Cheat_Sheet.html
+      source_rule_url:
+      - https://github.com/ajinabraham/njsscan/blob/75bfbeb9c8d72999e4d527dfa2548f7f0f3cc48a/njsscan/rules/semantic_grep/eval/eval_deserialize.yaml
+      subcategory:
+      - vuln
+      technology:
+      - express
+    mode: taint
+    options:
+      interfile: true
+    pattern-sinks:
+    - pattern-either:
+      - patterns:
+        - pattern-either:
+          - pattern-inside: '$SER = require(''$IMPORT'')
+
+              ...
+
+              '
+          - pattern-inside: "import $SER from '$IMPORT'\n ...\n"
+          - pattern-inside: 'import * as $SER from ''$IMPORT''
+
+              ...
+
+              '
+        - metavariable-regex:
+            metavariable: $IMPORT
+            regex: ^(node-serialize|serialize-to-js)$
+        - pattern: $SER.$FUNC(...)
+        - metavariable-regex:
+            metavariable: $FUNC
+            regex: ^(unserialize|deserialize)$
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: function ... ($REQ, $RES) {...}
+        - pattern-inside: function ... ($REQ, $RES, $NEXT) {...}
+        - patterns:
+          - pattern-either:
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES) {...})
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES, $NEXT)
+                {...})
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(get|post|put|head|delete|options)$
+      - pattern-either:
+        - pattern: $REQ.query
+        - pattern: $REQ.body
+        - pattern: $REQ.params
+        - pattern: $REQ.cookies
+        - pattern: $REQ.headers
+        - pattern: $REQ.files.$ANYTHING.data.toString('utf8')
+        - pattern: $REQ.files.$ANYTHING['data'].toString('utf8')
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '({ $REQ }: Request,$RES: Response, $NEXT: NextFunction)
+            =>
+
+            {...}
+
+            '
+        - pattern-inside: '({ $REQ }: Request,$RES: Response) => {...}
+
+            '
+      - focus-metavariable: $REQ
+      - pattern-either:
+        - pattern: params
+        - pattern: query
+        - pattern: cookies
+        - pattern: headers
+        - pattern: body
+        - pattern: files.$ANYTHING.data.toString('utf8')
+        - pattern: files.$ANYTHING['data'].toString('utf8')
+    severity: WARNING
+- rules:
+  - id: express-session-hardcoded-secret
+    languages:
+    - javascript
+    - typescript
+    message: A hard-coded credential was detected. It is not recommended to store
+      credentials in source-code, as this risks secrets being leaked and used by either
+      an internal or external malicious adversary. It is recommended to use environment
+      variables to securely provide credentials or retrieve credentials from a secure
+      vault or HSM (Hardware Security Module).
+    metadata:
+      category: security
+      confidence: HIGH
+      cwe:
+      - 'CWE-798: Use of Hard-coded Credentials'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: HIGH
+      interfile: true
+      likelihood: HIGH
+      owasp:
+      - A07:2021 - Identification and Authentication Failures
+      references:
+      - https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html
+      subcategory:
+      - vuln
+      technology:
+      - express
+      - secrets
+    options:
+      interfile: true
+    patterns:
+    - pattern-either:
+      - pattern-inside: '$SESSION = require(''express-session'');
+
+          ...
+
+          '
+      - pattern-inside: 'import $SESSION from ''express-session''
+
+          ...
+
+          '
+      - pattern-inside: 'import {..., $SESSION, ...} from ''express-session''
+
+          ...
+
+          '
+      - pattern-inside: 'import * as $SESSION from ''express-session''
+
+          ...
+
+          '
+    - patterns:
+      - pattern-either:
+        - pattern-inside: $APP.use($SESSION({...}))
+        - pattern: '$SECRET = $VALUE
+
+            ...
+
+            $APP.use($SESSION($SECRET))
+
+            '
+      - pattern: 'secret: ''$Y''
+
+          '
+    severity: WARNING
+- rules:
+  - id: express-check-csurf-middleware-usage
+    languages:
+    - javascript
+    - typescript
+    message: A CSRF middleware was not detected in your express application. Ensure
+      you are either using one such as `csurf` or `csrf` (see rule references) and/or
+      you are properly doing CSRF validation in your routes with a token or cookies.
+    metadata:
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-352: Cross-Site Request Forgery (CSRF)'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: HIGH
+      likelihood: LOW
+      owasp:
+      - A01:2021 - Broken Access Control
+      references:
+      - https://www.npmjs.com/package/csurf
+      - https://www.npmjs.com/package/csrf
+      - https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html
+      subcategory:
+      - audit
+      technology:
+      - javascript
+      - typescript
+      - express
+    patterns:
+    - pattern-inside: '$EXPRESS = require(''express'')
+
+        ...
+
+        '
+    - pattern-not-inside: 'import {$CSRF} from ''csurf''
+
+        ...
+
+        '
+    - pattern-not-inside: 'require(''csurf'')
+
+        ...
+
+        '
+    - pattern-not-inside: 'import {$CSRF} from ''csrf''
+
+        ...
+
+        '
+    - pattern-not-inside: 'require(''csrf'')
+
+        ...
+
+        '
+    - pattern: '$APP = $EXPRESS()
+
+        '
+    severity: INFO
+- rules:
+  - id: express-xml2json-xxe-event
+    languages:
+    - javascript
+    - typescript
+    message: Xml Parser is used inside Request Event. Make sure that unverified user
+      data can not reach the XML Parser, as it can result in XML External or Internal
+      Entity (XXE) Processing vulnerabilities
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-611: Improper Restriction of XML External Entity Reference'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: HIGH
+      likelihood: MEDIUM
+      owasp:
+      - A04:2017 - XML External Entities (XXE)
+      - A05:2021 - Security Misconfiguration
+      references:
+      - https://www.npmjs.com/package/xml2json
+      subcategory:
+      - vuln
+      technology:
+      - express
+    mode: taint
+    pattern-sinks:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: 'require(''xml2json'');
+
+            ...
+
+            '
+        - pattern-inside: 'import ''xml2json'';
+
+            ...
+
+            '
+      - pattern: $REQ.on('...', function(...) { ... $EXPAT.toJson($INPUT,...); ...
+          })
+      - focus-metavariable: $INPUT
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: function ... ($REQ, $RES) {...}
+        - pattern-inside: function ... ($REQ, $RES, $NEXT) {...}
+        - patterns:
+          - pattern-either:
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES) {...})
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES, $NEXT)
+                {...})
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(get|post|put|head|delete|options)$
+      - pattern-either:
+        - pattern: $REQ.query
+        - pattern: $REQ.body
+        - pattern: $REQ.params
+        - pattern: $REQ.cookies
+        - pattern: $REQ.headers
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '({ $REQ }: Request,$RES: Response, $NEXT: NextFunction)
+            => {...}
+
+            '
+        - pattern-inside: '({ $REQ }: Request,$RES: Response) => {...}
+
+            '
+      - focus-metavariable: $REQ
+      - pattern-either:
+        - pattern: params
+        - pattern: query
+        - pattern: cookies
+        - pattern: headers
+        - pattern: body
+    severity: WARNING
+- rules:
+  - id: express-libxml-noent
+    languages:
+    - javascript
+    - typescript
+    message: The libxml library processes user-input with the `noent` attribute is
+      set to `true` which can lead to being vulnerable to XML External Entities (XXE)
+      type attacks. It is recommended to set `noent` to `false` when using this feature
+      to ensure you are protected.
+    metadata:
+      category: security
+      confidence: HIGH
+      cwe:
+      - 'CWE-611: Improper Restriction of XML External Entity Reference'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: HIGH
+      interfile: true
+      likelihood: HIGH
+      owasp:
+      - A04:2017 - XML External Entities (XXE)
+      - A05:2021 - Security Misconfiguration
+      references:
+      - https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html
+      subcategory:
+      - vuln
+      technology:
+      - express
+    mode: taint
+    options:
+      interfile: true
+    pattern-sinks:
+    - pattern-either:
+      - patterns:
+        - pattern-either:
+          - pattern-inside: '$XML = require(''$IMPORT'')
+
+              ...
+
+              '
+          - pattern-inside: "import $XML from '$IMPORT'\n  ...\n"
+          - pattern-inside: 'import * as $XML from ''$IMPORT''
+
+              ...
+
+              '
+        - metavariable-regex:
+            metavariable: $IMPORT
+            regex: ^(libxmljs|libxmljs2)$
+        - pattern-inside: $XML.$FUNC($QUERY, {...,noent:true,...})
+        - metavariable-regex:
+            metavariable: $FUNC
+            regex: ^(parseXmlString|parseXml)$
+        - focus-metavariable: $QUERY
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: function ... ($REQ, $RES) {...}
+        - pattern-inside: function ... ($REQ, $RES, $NEXT) {...}
+        - patterns:
+          - pattern-either:
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES) {...})
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES, $NEXT)
+                {...})
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(get|post|put|head|delete|options)$
+      - pattern-either:
+        - pattern: $REQ.query
+        - pattern: $REQ.body
+        - pattern: $REQ.params
+        - pattern: $REQ.cookies
+        - pattern: $REQ.headers
+        - pattern: $REQ.files.$ANYTHING.data.toString('utf8')
+        - pattern: $REQ.files.$ANYTHING['data'].toString('utf8')
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '({ $REQ }: Request,$RES: Response, $NEXT: NextFunction)
+            =>
+
+            {...}
+
+            '
+        - pattern-inside: '({ $REQ }: Request,$RES: Response) => {...}
+
+            '
+      - focus-metavariable: $REQ
+      - pattern-either:
+        - pattern: params
+        - pattern: query
+        - pattern: cookies
+        - pattern: headers
+        - pattern: body
+        - pattern: files.$ANYTHING.data.toString('utf8')
+        - pattern: files.$ANYTHING['data'].toString('utf8')
+    severity: ERROR
+- rules:
+  - id: remote-property-injection
+    languages:
+    - javascript
+    - typescript
+    message: Bracket object notation with user input is present, this might allow
+      an attacker to access all properties of the object and even it's prototype.
+      Use literal values for object properties.
+    metadata:
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-522: Insufficiently Protected Credentials'
+      cwe2021-top25: true
+      impact: MEDIUM
+      likelihood: MEDIUM
+      owasp:
+      - A02:2017 - Broken Authentication
+      - A04:2021 - Insecure Design
+      references:
+      - https://github.com/nodesecurity/eslint-plugin-security/blob/3c7522ca1be800353513282867a1034c795d9eb4/docs/the-dangers-of-square-bracket-notation.md
+      subcategory:
+      - vuln
+      technology:
+      - express
+    mode: taint
+    pattern-sanitizers:
+    - patterns:
+      - pattern: var $X = ...
+      - pattern-not: var $X = $REQ.$ANY
+    pattern-sinks:
+    - patterns:
+      - pattern-inside: $OBJ[...] = ...
+      - pattern-not-inside: $OBJ["..."] = ...
+      - pattern-not-inside: $OBJ[...] = "..."
+      - pattern: $INDEX
+      - pattern-not: '"..." + $INDEX
+
+          '
+      - pattern-not: '$INDEX + "..."
+
+          '
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: function ... ($REQ, $RES) {...}
+        - pattern-inside: function ... ($REQ, $RES, $NEXT) {...}
+        - patterns:
+          - pattern-either:
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES) {...})
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES, $NEXT)
+                {...})
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(get|post|put|head|delete|options)$
+      - pattern-either:
+        - pattern: $REQ.query
+        - pattern: $REQ.body
+        - pattern: $REQ.params
+        - pattern: $REQ.cookies
+        - pattern: $REQ.headers
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '({ $REQ }: Request,$RES: Response, $NEXT: NextFunction)
+            =>
+
+            {...}
+
+            '
+        - pattern-inside: '({ $REQ }: Request,$RES: Response) => {...}
+
+            '
+      - focus-metavariable: $REQ
+      - pattern-either:
+        - pattern: params
+        - pattern: query
+        - pattern: cookies
+        - pattern: headers
+        - pattern: body
+    severity: ERROR
+- rules:
+  - id: unknown-value-in-redirect
+    languages:
+    - javascript
+    - typescript
+    message: It looks like '$UNK' is read from user input and it is used to as a redirect.
+      Ensure '$UNK' is not externally controlled, otherwise this is an open redirect.
+    metadata:
+      asvs:
+        control_id: 5.5.1 Insecue Redirect
+        control_url: https://github.com/OWASP/ASVS/blob/master/4.0/en/0x13-V5-Validation-Sanitization-Encoding.md#v51-input-validation
+        section: V5 Validation, Sanitization and Encoding
+        version: '4'
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-601: URL Redirection to Untrusted Site (''Open Redirect'')'
+      impact: LOW
+      likelihood: LOW
+      owasp:
+      - A01:2021 - Broken Access Control
+      references:
+      - https://owasp.org/Top10/A01_2021-Broken_Access_Control
+      subcategory:
+      - audit
+      technology:
+      - express
+    patterns:
+    - pattern-either:
+      - pattern-inside: '$UNK = query.$B;
+
+          ...
+
+          '
+      - pattern-inside: '$UNK = $A.query.$B;
+
+          ...
+
+          '
+      - pattern-inside: '$UNK = req.$SOMETHING;
+
+          ...
+
+          '
+    - pattern: $RES.redirect(..., <... $UNK ...>, ...)
+    severity: WARNING
+- rules:
+  - id: express-ssrf
+    languages:
+    - javascript
+    - typescript
+    message: 'The following request $REQUEST.$METHOD() was found to be crafted from
+      user-input `$REQ` which can lead to Server-Side Request Forgery (SSRF) vulnerabilities.
+      It is recommended where possible to not allow user-input to craft the base request,
+      but to be treated as part of the path or query parameter. When user-input is
+      necessary to craft the request, it is recommeneded to follow OWASP best practices
+      to prevent abuse. '
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-918: Server-Side Request Forgery (SSRF)'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: HIGH
+      likelihood: MEDIUM
+      owasp:
+      - A10:2021 - Server-Side Request Forgery (SSRF)
+      references:
+      - https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html
+      subcategory:
+      - vuln
+      technology:
+      - express
+    mode: taint
+    options:
+      taint_unify_mvars: true
+    pattern-sinks:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '$REQUEST = require(''request'')
+
+            ...
+
+            '
+        - pattern-inside: 'import * as $REQUEST from ''request''
+
+            ...
+
+            '
+        - pattern-inside: 'import $REQUEST from ''request''
+
+            ...
+
+            '
+      - pattern-either:
+        - pattern: $REQUEST.$METHOD("$HTTP"+$REQ. ... .$VALUE)
+        - pattern: $REQUEST.$METHOD("$HTTP"+$REQ. ... .$VALUE + $...A)
+        - pattern: $REQUEST.$METHOD(`$HTTP${$REQ. ... .$VALUE}...`)
+        - pattern: $REQUEST.$METHOD("$HTTP"+$REQ.$VALUE[...])
+        - pattern: $REQUEST.$METHOD("$HTTP"+$REQ.$VALUE[...] + $...A)
+        - pattern: $REQUEST.$METHOD(`$HTTP${$REQ.$VALUE[...]}...`)
+      - metavariable-regex:
+          metavariable: $METHOD
+          regex: ^(get|post|put|patch|del|head|delete)$
+      - metavariable-regex:
+          metavariable: $HTTP
+          regex: ^(https?:\/\/|//)$
+      - pattern-either:
+        - pattern: $REQ. ... .$VALUE
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '$REQUEST = require(''request'')
+
+            ...
+
+            '
+        - pattern-inside: 'import * as $REQUEST from ''request''
+
+            ...
+
+            '
+        - pattern-inside: 'import $REQUEST from ''request''
+
+            ...
+
+            '
+      - pattern-either:
+        - pattern: $REQUEST.$METHOD($REQ. ... .$VALUE,...)
+        - pattern: $REQUEST.$METHOD($REQ. ... .$VALUE + $...A,...)
+        - pattern: $REQUEST.$METHOD(`${$REQ. ... .$VALUE}...`,...)
+      - pattern: $REQ. ... .$VALUE
+      - metavariable-regex:
+          metavariable: $METHOD
+          regex: ^(get|post|put|patch|del|head|delete)$
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '$REQUEST = require(''request'')
+
+            ...
+
+            '
+        - pattern-inside: 'import * as $REQUEST from ''request''
+
+            ...
+
+            '
+        - pattern-inside: 'import $REQUEST from ''request''
+
+            ...
+
+            '
+      - pattern-either:
+        - pattern: $REQUEST.$METHOD($REQ.$VALUE['...'],...)
+        - pattern: $REQUEST.$METHOD($REQ.$VALUE['...'] + $...A,...)
+        - pattern: $REQUEST.$METHOD(`${$REQ.$VALUE['...']}...`,...)
+      - pattern: $REQ.$VALUE
+      - metavariable-regex:
+          metavariable: $METHOD
+          regex: ^(get|post|put|patch|del|head|delete)$
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '$REQUEST = require(''request'')
+
+            ...
+
+            '
+        - pattern-inside: 'import * as $REQUEST from ''request''
+
+            ...
+
+            '
+        - pattern-inside: 'import $REQUEST from ''request''
+
+            ...
+
+            '
+      - pattern-either:
+        - pattern-inside: '$ASSIGN = $REQ. ... .$VALUE
+
+            ...
+
+            '
+        - pattern-inside: '$ASSIGN = $REQ. ... .$VALUE[''...'']
+
+            ...
+
+            '
+        - pattern-inside: '$ASSIGN = $REQ. ... .$VALUE + $...A
+
+            ...
+
+            '
+        - pattern-inside: "$ASSIGN = $REQ. ... .$VALUE['...'] + $...A\n...     \n"
+        - pattern-inside: '$ASSIGN = `${$REQ. ... .$VALUE}...`
+
+            ...
+
+            '
+        - pattern-inside: "$ASSIGN = `${$REQ. ... .$VALUE['...']}...`\n... \n"
+        - patterns:
+          - pattern-either:
+            - pattern-inside: '$ASSIGN = "$HTTP"+ $REQ. ... .$VALUE
+
+                ...
+
+                '
+            - pattern-inside: '$ASSIGN = "$HTTP"+$REQ. ... .$VALUE + $...A
+
+                ...
+
+                '
+            - pattern-inside: '$ASSIGN = "$HTTP"+$REQ.$VALUE[...]
+
+                ...
+
+                '
+            - pattern-inside: '$ASSIGN = "$HTTP"+$REQ.$VALUE[...] + $...A
+
+                ...
+
+                '
+            - pattern-inside: '$ASSIGN = `$HTTP${$REQ.$VALUE[...]}...`
+
+                ...
+
+                '
+          - metavariable-regex:
+              metavariable: $HTTP
+              regex: ^(https?:\/\/|//)$
+      - pattern-either:
+        - pattern: $REQUEST.$METHOD($ASSIGN,...)
+        - pattern: $REQUEST.$METHOD($ASSIGN + $...FOO,...)
+        - pattern: $REQUEST.$METHOD(`${$ASSIGN}...`,...)
+        - patterns:
+          - pattern-either:
+            - pattern: $REQUEST.$METHOD("$HTTP"+$ASSIGN,...)
+            - pattern: $REQUEST.$METHOD("$HTTP"+$ASSIGN + $...A,...)
+            - pattern: $REQUEST.$METHOD(`$HTTP${$ASSIGN}...`,...)
+          - metavariable-regex:
+              metavariable: $HTTP
+              regex: ^(https?:\/\/|//)$
+      - pattern: $ASSIGN
+      - metavariable-regex:
+          metavariable: $METHOD
+          regex: ^(get|post|put|patch|del|head|delete)$
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: function ... ($REQ, ...) {...}
+      - pattern-either:
+        - pattern: $REQ.query
+        - pattern: $REQ.body
+        - pattern: $REQ.params
+        - pattern: $REQ.cookies
+        - pattern: $REQ.headers
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '({ $REQ }: Request,...) =>
+
+            {...}
+
+            '
+        - pattern-inside: '({ $REQ }: $EXPRESS.Request,...) => {...}
+
+            '
+      - focus-metavariable: $REQ
+      - pattern-either:
+        - pattern: params
+        - pattern: query
+        - pattern: cookies
+        - pattern: headers
+        - pattern: body
+    severity: WARNING
+- rules:
+  - id: express-cookie-session-default-name
+    languages:
+    - javascript
+    - typescript
+    message: "Don\u2019t use the default session cookie name Using the default session\
+      \ cookie name can open your app to attacks. The security issue posed is similar\
+      \ to X-Powered-By: a potential attacker can use it to fingerprint the server\
+      \ and target attacks accordingly."
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-522: Insufficiently Protected Credentials'
+      cwe2021-top25: true
+      impact: LOW
+      likelihood: HIGH
+      owasp:
+      - A02:2017 - Broken Authentication
+      - A04:2021 - Insecure Design
+      references:
+      - https://owasp.org/Top10/A04_2021-Insecure_Design
+      source-rule-url: https://expressjs.com/en/advanced/best-practice-security.html
+      subcategory:
+      - vuln
+      technology:
+      - express
+    patterns:
+    - pattern-either:
+      - pattern-inside: '$SESSION = require(''cookie-session'');
+
+          ...
+
+          '
+      - pattern-inside: '$SESSION = require(''express-session'');
+
+          ...
+
+          '
+    - pattern: $SESSION(...)
+    - pattern-not-inside: $SESSION(<... {name:...} ...>,...)
+    - pattern-not-inside: '$OPTS = <... {name:...} ...>;
+
+        ...
+
+        $SESSION($OPTS,...);
+
+        '
+    - pattern-not-inside: '$OPTS = ...;
+
+        ...
+
+        $OPTS.name = ...;
+
+        ...
+
+        $SESSION($OPTS,...);
+
+        '
+    severity: WARNING
+  - id: express-cookie-session-no-secure
+    languages:
+    - javascript
+    - typescript
+    message: 'Default session middleware settings: `secure` not set. It ensures the
+      browser only sends the cookie over HTTPS.'
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-522: Insufficiently Protected Credentials'
+      cwe2021-top25: true
+      impact: LOW
+      likelihood: HIGH
+      owasp:
+      - A02:2017 - Broken Authentication
+      - A04:2021 - Insecure Design
+      references:
+      - https://owasp.org/Top10/A04_2021-Insecure_Design
+      source-rule-url: https://expressjs.com/en/advanced/best-practice-security.html
+      subcategory:
+      - vuln
+      technology:
+      - express
+    patterns:
+    - pattern-either:
+      - pattern-inside: '$SESSION = require(''cookie-session'');
+
+          ...
+
+          '
+      - pattern-inside: '$SESSION = require(''express-session'');
+
+          ...
+
+          '
+    - pattern: $SESSION(...)
+    - pattern-not-inside: $SESSION(<... {cookie:{secure:true}} ...>,...)
+    - pattern-not-inside: '$OPTS = <... {cookie:{secure:true}} ...>;
+
+        ...
+
+        $SESSION($OPTS,...);
+
+        '
+    - pattern-not-inside: '$OPTS = ...;
+
+        ...
+
+        $COOKIE = <... {secure:true} ...>;
+
+        ...
+
+        $SESSION($OPTS,...);
+
+        '
+    - pattern-not-inside: '$OPTS = ...;
+
+        ...
+
+        $OPTS.cookie = <... {secure:true} ...>;
+
+        ...
+
+        $SESSION($OPTS,...);
+
+        '
+    - pattern-not-inside: '$OPTS = ...;
+
+        ...
+
+        $COOKIE.secure = true;
+
+        ...
+
+        $SESSION($OPTS,...);
+
+        '
+    - pattern-not-inside: '$OPTS = ...;
+
+        ...
+
+        $OPTS.cookie.secure = true;
+
+        ...
+
+        $SESSION($OPTS,...);
+
+        '
+    severity: WARNING
+  - id: express-cookie-session-no-httponly
+    languages:
+    - javascript
+    - typescript
+    message: 'Default session middleware settings: `httpOnly` not set. It ensures
+      the cookie is sent only over HTTP(S), not client JavaScript, helping to protect
+      against cross-site scripting attacks.'
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-522: Insufficiently Protected Credentials'
+      cwe2021-top25: true
+      impact: LOW
+      likelihood: HIGH
+      owasp:
+      - A02:2017 - Broken Authentication
+      - A04:2021 - Insecure Design
+      references:
+      - https://owasp.org/Top10/A04_2021-Insecure_Design
+      source-rule-url: https://expressjs.com/en/advanced/best-practice-security.html
+      subcategory:
+      - vuln
+      technology:
+      - express
+    patterns:
+    - pattern-either:
+      - pattern-inside: '$SESSION = require(''cookie-session'');
+
+          ...
+
+          '
+      - pattern-inside: '$SESSION = require(''express-session'');
+
+          ...
+
+          '
+    - pattern: $SESSION(...)
+    - pattern-not-inside: $SESSION(<... {cookie:{httpOnly:true}} ...>,...)
+    - pattern-not-inside: '$OPTS = <... {cookie:{httpOnly:true}} ...>;
+
+        ...
+
+        $SESSION($OPTS,...);
+
+        '
+    - pattern-not-inside: '$OPTS = ...;
+
+        ...
+
+        $COOKIE = <... {httpOnly:true} ...>;
+
+        ...
+
+        $SESSION($OPTS,...);
+
+        '
+    - pattern-not-inside: '$OPTS = ...;
+
+        ...
+
+        $OPTS.cookie = <... {httpOnly:true} ...>;
+
+        ...
+
+        $SESSION($OPTS,...);
+
+        '
+    - pattern-not-inside: '$OPTS = ...;
+
+        ...
+
+        $COOKIE.httpOnly = true;
+
+        ...
+
+        $SESSION($OPTS,...);
+
+        '
+    - pattern-not-inside: '$OPTS = ...;
+
+        ...
+
+        $OPTS.cookie.httpOnly = true;
+
+        ...
+
+        $SESSION($OPTS,...);
+
+        '
+    severity: WARNING
+  - id: express-cookie-session-no-domain
+    languages:
+    - javascript
+    - typescript
+    message: 'Default session middleware settings: `domain` not set. It indicates
+      the domain of the cookie; use it to compare against the domain of the server
+      in which the URL is being requested. If they match, then check the path attribute
+      next.'
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-522: Insufficiently Protected Credentials'
+      cwe2021-top25: true
+      impact: LOW
+      likelihood: HIGH
+      owasp:
+      - A02:2017 - Broken Authentication
+      - A04:2021 - Insecure Design
+      references:
+      - https://owasp.org/Top10/A04_2021-Insecure_Design
+      source-rule-url: https://expressjs.com/en/advanced/best-practice-security.html
+      subcategory:
+      - vuln
+      technology:
+      - express
+    patterns:
+    - pattern-either:
+      - pattern-inside: '$SESSION = require(''cookie-session'');
+
+          ...
+
+          '
+      - pattern-inside: '$SESSION = require(''express-session'');
+
+          ...
+
+          '
+    - pattern: $SESSION(...)
+    - pattern-not-inside: $SESSION(<... {cookie:{domain:...}} ...>,...)
+    - pattern-not-inside: '$OPTS = <... {cookie:{domain:...}} ...>;
+
+        ...
+
+        $SESSION($OPTS,...);
+
+        '
+    - pattern-not-inside: '$OPTS = ...;
+
+        ...
+
+        $COOKIE = <... {domain:...} ...>;
+
+        ...
+
+        $SESSION($OPTS,...);
+
+        '
+    - pattern-not-inside: '$OPTS = ...;
+
+        ...
+
+        $OPTS.cookie = <... {domain:...} ...>;
+
+        ...
+
+        $SESSION($OPTS,...);
+
+        '
+    - pattern-not-inside: '$OPTS = ...;
+
+        ...
+
+        $COOKIE.domain = ...;
+
+        ...
+
+        $SESSION($OPTS,...);
+
+        '
+    - pattern-not-inside: '$OPTS = ...;
+
+        ...
+
+        $OPTS.cookie.domain = ...;
+
+        ...
+
+        $SESSION($OPTS,...);
+
+        '
+    severity: WARNING
+  - id: express-cookie-session-no-path
+    languages:
+    - javascript
+    - typescript
+    message: 'Default session middleware settings: `path` not set. It indicates the
+      path of the cookie; use it to compare against the request path. If this and
+      domain match, then send the cookie in the request.'
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-522: Insufficiently Protected Credentials'
+      cwe2021-top25: true
+      impact: LOW
+      likelihood: HIGH
+      owasp:
+      - A02:2017 - Broken Authentication
+      - A04:2021 - Insecure Design
+      references:
+      - https://owasp.org/Top10/A04_2021-Insecure_Design
+      source-rule-url: https://expressjs.com/en/advanced/best-practice-security.html
+      subcategory:
+      - vuln
+      technology:
+      - express
+    patterns:
+    - pattern-either:
+      - pattern-inside: '$SESSION = require(''cookie-session'');
+
+          ...
+
+          '
+      - pattern-inside: '$SESSION = require(''express-session'');
+
+          ...
+
+          '
+    - pattern: $SESSION(...)
+    - pattern-not-inside: $SESSION(<... {cookie:{path:...}} ...>,...)
+    - pattern-not-inside: '$OPTS = <... {cookie:{path:...}} ...>;
+
+        ...
+
+        $SESSION($OPTS,...);
+
+        '
+    - pattern-not-inside: '$OPTS = ...;
+
+        ...
+
+        $COOKIE = <... {path:...} ...>;
+
+        ...
+
+        $SESSION($OPTS,...);
+
+        '
+    - pattern-not-inside: '$OPTS = ...;
+
+        ...
+
+        $OPTS.cookie = <... {path:...} ...>;
+
+        ...
+
+        $SESSION($OPTS,...);
+
+        '
+    - pattern-not-inside: '$OPTS = ...;
+
+        ...
+
+        $COOKIE.path = ...;
+
+        ...
+
+        $SESSION($OPTS,...);
+
+        '
+    - pattern-not-inside: '$OPTS = ...;
+
+        ...
+
+        $OPTS.cookie.path = ...;
+
+        ...
+
+        $SESSION($OPTS,...);
+
+        '
+    severity: WARNING
+  - id: express-cookie-session-no-expires
+    languages:
+    - javascript
+    - typescript
+    message: 'Default session middleware settings: `expires` not set. Use it to set
+      expiration date for persistent cookies.'
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-522: Insufficiently Protected Credentials'
+      cwe2021-top25: true
+      impact: LOW
+      likelihood: HIGH
+      owasp:
+      - A02:2017 - Broken Authentication
+      - A04:2021 - Insecure Design
+      references:
+      - https://owasp.org/Top10/A04_2021-Insecure_Design
+      source-rule-url: https://expressjs.com/en/advanced/best-practice-security.html
+      subcategory:
+      - vuln
+      technology:
+      - express
+    patterns:
+    - pattern-either:
+      - pattern-inside: '$SESSION = require(''cookie-session'');
+
+          ...
+
+          '
+      - pattern-inside: '$SESSION = require(''express-session'');
+
+          ...
+
+          '
+    - pattern: $SESSION(...)
+    - pattern-not-inside: $SESSION(<... {cookie:{expires:...}} ...>,...)
+    - pattern-not-inside: '$OPTS = <... {cookie:{expires:...}} ...>;
+
+        ...
+
+        $SESSION($OPTS,...);
+
+        '
+    - pattern-not-inside: '$OPTS = ...;
+
+        ...
+
+        $COOKIE = <... {expires:...} ...>;
+
+        ...
+
+        $SESSION($OPTS,...);
+
+        '
+    - pattern-not-inside: '$OPTS = ...;
+
+        ...
+
+        $OPTS.cookie = <... {expires:...} ...>;
+
+        ...
+
+        $SESSION($OPTS,...);
+
+        '
+    - pattern-not-inside: '$OPTS = ...;
+
+        ...
+
+        $COOKIE.expires = ...;
+
+        ...
+
+        $SESSION($OPTS,...);
+
+        '
+    - pattern-not-inside: '$OPTS = ...;
+
+        ...
+
+        $OPTS.cookie.expires = ...;
+
+        ...
+
+        $SESSION($OPTS,...);'
+    severity: WARNING
+- rules:
+  - id: express-jwt-not-revoked
+    languages:
+    - javascript
+    - typescript
+    message: No token revoking configured for `express-jwt`. A leaked token could
+      still be used and unable to be revoked. Consider using function as the `isRevoked`
+      option.
+    metadata:
+      asvs:
+        control_id: 3.5.3 Insecue Stateless Session Tokens
+        control_url: https://github.com/OWASP/ASVS/blob/master/4.0/en/0x12-V3-Session-management.md#v35-token-based-session-management
+        section: 'V3: Session Management Verification Requirements'
+        version: '4'
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-522: Insufficiently Protected Credentials'
+      cwe2021-top25: true
+      impact: MEDIUM
+      likelihood: MEDIUM
+      owasp:
+      - A02:2017 - Broken Authentication
+      - A04:2021 - Insecure Design
+      references:
+      - https://owasp.org/Top10/A04_2021-Insecure_Design
+      source-rule-url: https://github.com/goldbergyoni/nodebestpractices/blob/master/sections/security/expirejwt.md
+      subcategory:
+      - vuln
+      technology:
+      - express
+    patterns:
+    - pattern-inside: '$JWT = require(''express-jwt'');
+
+        ...
+
+        '
+    - pattern: $JWT(...)
+    - pattern-not-inside: $JWT(<... {isRevoked:...} ...>,...)
+    - pattern-not-inside: '$OPTS = <... {isRevoked:...} ...>;
+
+        ...
+
+        $JWT($OPTS,...);'
+    severity: WARNING
+- rules:
+  - id: express-path-join-resolve-traversal
+    languages:
+    - javascript
+    - typescript
+    message: Possible writing outside of the destination, make sure that the target
+      path is nested in the intended destination
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-22: Improper Limitation of a Pathname to a Restricted Directory (''Path
+        Traversal'')'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      likelihood: HIGH
+      owasp:
+      - A05:2017 - Broken Access Control
+      - A01:2021 - Broken Access Control
+      references:
+      - https://owasp.org/www-community/attacks/Path_Traversal
+      subcategory:
+      - vuln
+      technology:
+      - express
+      - node.js
+    mode: taint
+    pattern-sanitizers:
+    - pattern: $Y.replace(...)
+    - pattern: $Y.indexOf(...)
+    - pattern: "function ... (...) {\n    ...\n    <... $Y.indexOf(...) ...>\n   \
+        \ ...\n}\n"
+    - patterns:
+      - pattern: $FUNC(...)
+      - metavariable-regex:
+          metavariable: $FUNC
+          regex: sanitize
+    pattern-sinks:
+    - patterns:
+      - focus-metavariable: $SINK
+      - pattern-either:
+        - pattern-inside: '$PATH = require(''path'');
+
+            ...
+
+            '
+        - pattern-inside: 'import $PATH from ''path'';
+
+            ...
+
+            '
+      - pattern-either:
+        - pattern: $PATH.join(...,$SINK,...)
+        - pattern: $PATH.resolve(...,$SINK,...)
+    - patterns:
+      - focus-metavariable: $SINK
+      - pattern-inside: 'import ''path'';
+
+          ...
+
+          '
+      - pattern-either:
+        - pattern: path.join(...,$SINK,...)
+        - pattern: path.resolve(...,$SINK,...)
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: function ... ($REQ, $RES) {...}
+        - pattern-inside: function ... ($REQ, $RES, $NEXT) {...}
+        - patterns:
+          - pattern-either:
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES) {...})
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES, $NEXT)
+                {...})
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(get|post|put|head|delete|options)$
+      - pattern-either:
+        - pattern: $REQ.query
+        - pattern: $REQ.body
+        - pattern: $REQ.params
+        - pattern: $REQ.cookies
+        - pattern: $REQ.headers
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '({ $REQ }: Request,$RES: Response, $NEXT: NextFunction)
+            =>
+
+            {...}
+
+            '
+        - pattern-inside: '({ $REQ }: Request,$RES: Response) => {...}
+
+            '
+      - focus-metavariable: $REQ
+      - pattern-either:
+        - pattern: params
+        - pattern: query
+        - pattern: cookies
+        - pattern: headers
+        - pattern: body
+    severity: WARNING
+- rules:
+  - id: express-open-redirect
+    languages:
+    - javascript
+    - typescript
+    message: The application redirects to a URL specified by user-supplied input `$REQ`
+      that is not validated. This could redirect users to malicious locations. Consider
+      using an allow-list approach to validate URLs, or warn users they are being
+      redirected to a third-party website.
+    metadata:
+      category: security
+      confidence: HIGH
+      cwe:
+      - 'CWE-601: URL Redirection to Untrusted Site (''Open Redirect'')'
+      impact: MEDIUM
+      likelihood: HIGH
+      owasp:
+      - A01:2021 - Broken Access Control
+      references:
+      - https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html
+      subcategory:
+      - vuln
+      technology:
+      - express
+    mode: taint
+    options:
+      symbolic_propagation: true
+      taint_unify_mvars: true
+    pattern-sinks:
+    - patterns:
+      - pattern-either:
+        - pattern: $RES.redirect("$HTTP"+$REQ. ... .$VALUE)
+        - pattern: $RES.redirect("$HTTP"+$REQ. ... .$VALUE + $...A)
+        - pattern: $RES.redirect(`$HTTP${$REQ. ... .$VALUE}...`)
+        - pattern: $RES.redirect("$HTTP"+$REQ.$VALUE[...])
+        - pattern: $RES.redirect("$HTTP"+$REQ.$VALUE[...] + $...A)
+        - pattern: $RES.redirect(`$HTTP${$REQ.$VALUE[...]}...`)
+      - metavariable-regex:
+          metavariable: $HTTP
+          regex: ^https?:\/\/$
+      - pattern-either:
+        - pattern: $REQ. ... .$VALUE
+    - patterns:
+      - pattern-either:
+        - pattern: $RES.redirect($REQ. ... .$VALUE)
+        - pattern: $RES.redirect($REQ. ... .$VALUE + $...A)
+        - pattern: $RES.redirect(`${$REQ. ... .$VALUE}...`)
+      - pattern: $REQ. ... .$VALUE
+    - patterns:
+      - pattern-either:
+        - pattern: $RES.redirect($REQ.$VALUE['...'])
+        - pattern: $RES.redirect($REQ.$VALUE['...'] + $...A)
+        - pattern: $RES.redirect(`${$REQ.$VALUE['...']}...`)
+      - pattern: $REQ.$VALUE
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '$ASSIGN = $REQ. ... .$VALUE
+
+            ...
+
+            '
+        - pattern-inside: '$ASSIGN = $REQ.$VALUE[''...'']
+
+            ...
+
+            '
+        - pattern-inside: '$ASSIGN = $REQ. ... .$VALUE + $...A
+
+            ...
+
+            '
+        - pattern-inside: "$ASSIGN = $REQ.$VALUE['...'] + $...A\n...     \n"
+        - pattern-inside: '$ASSIGN = `${$REQ. ... .$VALUE}...`
+
+            ...
+
+            '
+        - pattern-inside: "$ASSIGN = `${$REQ.$VALUE['...']}...`\n...             \
+            \       \n"
+      - pattern-either:
+        - pattern: $RES.redirect($ASSIGN)
+        - pattern: $RES.redirect($ASSIGN + $...FOO)
+        - pattern: $RES.redirect(`${$ASSIGN}...`)
+      - focus-metavariable: $ASSIGN
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: function ... ($REQ, $RES) {...}
+        - pattern-inside: function ... ($REQ, $RES, $NEXT) {...}
+        - patterns:
+          - pattern-either:
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES) {...})
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES, $NEXT)
+                {...})
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(get|post|put|head|delete|options)$
+      - pattern-either:
+        - pattern: $REQ.query
+        - pattern: $REQ.body
+        - pattern: $REQ.params
+        - pattern: $REQ.cookies
+        - pattern: $REQ.headers
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '({ $REQ }: Request,$RES: Response, $NEXT: NextFunction)
+            =>
+
+            {...}
+
+            '
+        - pattern-inside: '({ $REQ }: Request,$RES: Response) => {...}
+
+            '
+      - focus-metavariable: $REQ
+      - pattern-either:
+        - pattern: params
+        - pattern: query
+        - pattern: cookies
+        - pattern: headers
+        - pattern: body
+    severity: WARNING
+- rules:
+  - id: express-res-sendfile
+    languages:
+    - javascript
+    - typescript
+    message: The application processes user-input, this is passed to res.sendFile
+      which can allow an attacker to arbitrarily read files on the system through
+      path traversal. It is recommended to perform input validation in addition to
+      canonicalizing the path. This allows you to validate the path against the intended
+      directory it should be accessing.
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-73: External Control of File Name or Path'
+      impact: MEDIUM
+      likelihood: HIGH
+      owasp:
+      - A04:2021 - Insecure Design
+      references:
+      - https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html
+      subcategory:
+      - vuln
+      technology:
+      - express
+    mode: taint
+    pattern-sinks:
+    - patterns:
+      - pattern-either:
+        - pattern: $RES.$METH($QUERY,...)
+      - pattern-not-inside: $RES.$METH($QUERY,$OPTIONS)
+      - metavariable-regex:
+          metavariable: $METH
+          regex: ^(sendfile|sendFile)$
+      - focus-metavariable: $QUERY
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: function ... ($REQ, $RES) {...}
+        - pattern-inside: function ... ($REQ, $RES, $NEXT) {...}
+        - patterns:
+          - pattern-either:
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES) {...})
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES, $NEXT)
+                {...})
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(get|post|put|head|delete|options)$
+      - pattern-either:
+        - pattern: $REQ.query
+        - pattern: $REQ.body
+        - pattern: $REQ.params
+        - pattern: $REQ.cookies
+        - pattern: $REQ.headers
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '({ $REQ }: Request,$RES: Response, $NEXT: NextFunction)
+            =>
+
+            {...}
+
+            '
+        - pattern-inside: '({ $REQ }: Request,$RES: Response) => {...}
+
+            '
+      - pattern-either:
+        - pattern: params
+        - pattern: query
+        - pattern: cookies
+        - pattern: headers
+        - pattern: body
+    - patterns:
+      - pattern-either:
+        - patterns:
+          - pattern-either:
+            - pattern-inside: 'function ... (...,$REQ: $TYPE, ...) {...}
+
+                '
+          - metavariable-regex:
+              metavariable: $TYPE
+              regex: ^(string|String)
+    severity: WARNING
+- rules:
+  - id: express-check-directory-listing
+    languages:
+    - javascript
+    - typescript
+    message: Directory listing/indexing is enabled, which may lead to disclosure of
+      sensitive directories and files. It is recommended to disable directory listing
+      unless it is a public resource. If you need directory listing, ensure that sensitive
+      files are inaccessible when querying the resource.
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-548: Exposure of Information Through Directory Listing'
+      impact: MEDIUM
+      interfile: true
+      likelihood: HIGH
+      owasp:
+      - A06:2017 - Security Misconfiguration
+      - A01:2021 - Broken Access Control
+      references:
+      - https://www.npmjs.com/package/serve-index
+      - https://www.acunetix.com/blog/articles/directory-listing-information-disclosure/
+      subcategory:
+      - vuln
+      technology:
+      - express
+    options:
+      interfile: true
+    patterns:
+    - pattern-either:
+      - pattern: '$APP.use(require(''serve-index'')(...))
+
+          '
+      - patterns:
+        - pattern-either:
+          - pattern-inside: '$SERVEINDEX = require(''serve-index'')
+
+              ...
+
+              '
+          - pattern-inside: 'import $SERVEINDEX from ''serve-index''
+
+              ...
+
+              '
+          - pattern-inside: 'import * as $SERVEINDEX from ''serve-index''
+
+              ...
+
+              '
+        - pattern-either:
+          - patterns:
+            - pattern-inside: '$VALUE = $SERVEINDEX(...)
+
+                ...
+
+                '
+            - pattern: '$VALUE(...)
+
+                '
+          - pattern: '$APP.use(..., $SERVEINDEX(...), ...)
+
+              '
+    severity: WARNING
+- rules:
+  - id: express-detect-notevil-usage
+    languages:
+    - javascript
+    - typescript
+    message: Detected usage of the `notevil` package, which is unmaintained and has
+      vulnerabilities. Using any sort of `eval()` functionality can be very dangerous,
+      but if you must, the `eval` package is an up to date alternative. Be sure that
+      only trusted input reaches an `eval()` function.
+    metadata:
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-1104: Use of Unmaintained Third Party Components'
+      impact: HIGH
+      likelihood: LOW
+      owasp:
+      - A06:2021 - Vulnerable and Outdated Components
+      references:
+      - https://github.com/mmckegg/notevil
+      subcategory:
+      - audit
+      technology:
+      - javascript
+      - typescript
+    patterns:
+    - pattern-either:
+      - pattern-inside: 'import $EVAL from ''notevil''
+
+          ...
+
+          '
+      - pattern-inside: 'import {$EVAL} from ''notevil''
+
+          ...
+
+          '
+      - pattern-inside: '$EVAL = require(''notevil'')
+
+          ...
+
+          '
+    - pattern-either:
+      - patterns:
+        - pattern: $EVAL(...)
+        - pattern-not: $EVAL('...')
+      - patterns:
+        - pattern-either:
+          - pattern: $VM.runInContext("$CMD", ...)
+          - pattern: $VM.runInNewContext("$CMD", ...)
+          - pattern: $VM.runInThisContext("$CMD", ...)
+          - pattern: $VM.compileFunction("$CMD", ...)
+        - metavariable-pattern:
+            language: typescript
+            metavariable: $CMD
+            patterns:
+            - pattern: $EVAL(...)
+            - pattern-not: $EVAL('...')
+    severity: WARNING
+- rules:
+  - id: res-render-injection
+    languages:
+    - javascript
+    - typescript
+    message: User controllable data `$REQ` enters `$RES.render(...)` this can lead
+      to the loading of other HTML/templating pages that they may not be authorized
+      to render. An attacker may attempt to use directory traversal techniques e.g.
+      `../folder/index` to access other HTML pages on the file system. Where possible,
+      do not allow users to define what should be  loaded in $RES.render or use an
+      allow list for the existing application.
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-706: Use of Incorrectly-Resolved Name or Reference'
+      impact: MEDIUM
+      interfile: true
+      likelihood: MEDIUM
+      owasp:
+      - A01:2021 - Broken Access Control
+      references:
+      - http://expressjs.com/en/4x/api.html#res.render
+      subcategory:
+      - vuln
+      technology:
+      - express
+    mode: taint
+    options:
+      interfile: true
+    pattern-sinks:
+    - patterns:
+      - pattern-either:
+        - pattern: $RES.render($SINK, ...)
+      - focus-metavariable: $SINK
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: function ... ($REQ, $RES) {...}
+        - pattern-inside: function ... ($REQ, $RES, $NEXT) {...}
+        - patterns:
+          - pattern-either:
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES) {...})
+            - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES, $NEXT)
+                {...})
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(get|post|put|head|delete|options)$
+      - pattern-either:
+        - pattern: $REQ.query
+        - pattern: $REQ.body
+        - pattern: $REQ.params
+        - pattern: $REQ.cookies
+        - pattern: $REQ.headers
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '({ $REQ }: Request,$RES: Response, $NEXT: NextFunction)
+            =>
+
+            {...}
+
+            '
+        - pattern-inside: '({ $REQ }: Request,$RES: Response) => {...}
+
+            '
+      - focus-metavariable: $REQ
+      - pattern-either:
+        - pattern: params
+        - pattern: query
+        - pattern: cookies
+        - pattern: headers
+        - pattern: body
+    severity: WARNING
+- rules:
+  - id: direct-response-write
+    languages:
+    - javascript
+    - typescript
+    message: Detected directly writing to a Response object from user-defined input.
+      This bypasses any HTML escaping and may expose your application to a Cross-Site-scripting
+      (XSS) vulnerability. Instead, use 'resp.render()' to render safely escaped HTML.
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-79: Improper Neutralization of Input During Web Page Generation (''Cross-site
+        Scripting'')'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      interfile: true
+      likelihood: MEDIUM
+      owasp:
+      - A07:2017 - Cross-Site Scripting (XSS)
+      - A03:2021 - Injection
+      references:
+      - https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html
+      subcategory:
+      - vuln
+      technology:
+      - express
+      vulnerability_class:
+      - Cross-Site-Scripting (XSS)
+    mode: taint
+    options:
+      interfile: true
+    pattern-sanitizers:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: 'import $S from "underscore.string"
+
+            ...
+
+            '
+        - pattern-inside: 'import * as $S from "underscore.string"
+
+            ...
+
+            '
+        - pattern-inside: 'import $S from "underscore.string"
+
+            ...
+
+            '
+        - pattern-inside: '$S = require("underscore.string")
+
+            ...
+
+            '
+      - pattern-either:
+        - pattern: $S.escapeHTML(...)
+    - patterns:
+      - pattern-either:
+        - pattern-inside: 'import $S from "dompurify"
+
+            ...
+
+            '
+        - pattern-inside: 'import { ..., $S,... } from "dompurify"
+
+            ...
+
+            '
+        - pattern-inside: 'import * as $S from "dompurify"
+
+            ...
+
+            '
+        - pattern-inside: '$S = require("dompurify")
+
+            ...
+
+            '
+        - pattern-inside: 'import $S from "isomorphic-dompurify"
+
+            ...
+
+            '
+        - pattern-inside: 'import * as $S from "isomorphic-dompurify"
+
+            ...
+
+            '
+        - pattern-inside: '$S = require("isomorphic-dompurify")
+
+            ...
+
+            '
+      - pattern-either:
+        - patterns:
+          - pattern-inside: '$VALUE = $S(...)
+
+              ...
+
+              '
+          - pattern: $VALUE.sanitize(...)
+        - patterns:
+          - pattern-inside: '$VALUE = $S.sanitize
+
+              ...
+
+              '
+          - pattern: $S(...)
+        - pattern: $S.sanitize(...)
+        - pattern: $S(...)
+    - patterns:
+      - pattern-either:
+        - pattern-inside: 'import $S from ''xss'';
+
+            ...
+
+            '
+        - pattern-inside: 'import * as $S from ''xss'';
+
+            ...
+
+            '
+        - pattern-inside: '$S = require("xss")
+
+            ...
+
+            '
+      - pattern: $S(...)
+    - patterns:
+      - pattern-either:
+        - pattern-inside: 'import $S from ''sanitize-html'';
+
+            ...
+
+            '
+        - pattern-inside: 'import * as $S from "sanitize-html";
+
+            ...
+
+            '
+        - pattern-inside: '$S = require("sanitize-html")
+
+            ...
+
+            '
+      - pattern: $S(...)
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '$S = new Remarkable()
+
+            ...
+
+            '
+      - pattern: $S.render(...)
+    - patterns:
+      - pattern-either:
+        - pattern-inside: 'import $S from ''express-xss-sanitizer'';
+
+            ...
+
+            '
+        - pattern-inside: 'import * as $S from "express-xss-sanitizer";
+
+            ...
+
+            '
+        - pattern-inside: 'const { ..., $S, ... } = require(''express-xss-sanitizer'');
+
+            ...
+
+            '
+        - pattern-inside: 'var { ..., $S, ... } = require(''express-xss-sanitizer'');
+
+            ...
+
+            '
+        - pattern-inside: 'let { ...,$S,... } = require(''express-xss-sanitizer'');
+
+            ...
+
+            '
+        - pattern-inside: '$S = require("express-xss-sanitizer")
+
+            ...
+
+            '
+      - pattern: $S(...)
+    - patterns:
+      - pattern: $RES. ... .type('$F'). ... .send(...)
+      - metavariable-regex:
+          metavariable: $F
+          regex: (?!.*text/html)
+    - patterns:
+      - pattern-inside: '$X = [...];
+
+          ...
+
+          '
+      - pattern: "if(<... !$X.includes($SOURCE)...>) {\n    ...\n    return ...\n\
+          }\n...\n"
+      - pattern: $SOURCE
+    pattern-sinks:
+    - patterns:
+      - pattern-inside: function ... (..., $RES,...) {...}
+      - pattern-either:
+        - pattern: $RES.write($ARG)
+        - pattern: $RES.send($ARG)
+      - pattern-not: $RES. ... .set('...'). ... .send($ARG)
+      - pattern-not: $RES. ... .type('...'). ... .send($ARG)
+      - pattern-not-inside: $RES.$METHOD({ ... })
+      - focus-metavariable: $ARG
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: function ... ($REQ, $RES) {...}
+        - pattern-inside: function ... ($REQ, $RES, $NEXT) {...}
+        - patterns:
+          - pattern-inside: $APP.$METHOD(..., function $FUNC($REQ, $RES) {...})
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(get|post|put|head|delete|options)
+      - pattern-not-inside: "function ... ($REQ, $RES) {\n    ...\n    $RES.$SET('Content-Type',\
+          \ '$TYPE')\n}\n"
+      - pattern-not-inside: "$APP.$METHOD(..., function $FUNC($REQ, $RES) {\n    ...\n\
+          \    $RES.$SET('Content-Type', '$TYPE')\n})\n"
+      - pattern-not-inside: "function ... ($REQ, $RES, $NEXT) {\n    ...\n    $RES.$SET('Content-Type',\
+          \ '$TYPE')\n}\n"
+      - pattern-not-inside: "function ... ($REQ, $RES) {\n    ...\n    $RES.set('$TYPE')\n\
+          }\n"
+      - pattern-not-inside: "$APP.$METHOD(..., function $FUNC($REQ, $RES) {\n    ...\n\
+          \    $RES.set('$TYPE')\n})\n"
+      - pattern-not-inside: "function ... ($REQ, $RES, $NEXT) {\n    ...\n    $RES.set('$TYPE')\n\
+          }\n"
+      - pattern-either:
+        - pattern: $REQ.query
+        - pattern: $REQ.body
+        - pattern: $REQ.params
+    - patterns:
+      - pattern-either:
+        - pattern-inside: '({ $REQ }: Request,$RES: Response, $NEXT: NextFunction)
+            =>
+
+            {...}
+
+            '
+        - pattern-inside: '({ $REQ }: Request,$RES: Response) => {...}
+
+            '
+      - pattern-not-inside: "({ $REQ }: Request,$RES: Response, $NEXT: NextFunction)\
+          \ =>\n{\n    ...\n    $RES.$SET('Content-Type', '$TYPE')\n}\n"
+      - pattern-not-inside: "({ $REQ }: Request,$RES: Response) => {\n    ...\n  \
+          \  $RES.$SET('Content-Type', '$TYPE')\n}\n"
+      - pattern-not-inside: "({ $REQ }: Request,$RES: Response, $NEXT: NextFunction)\
+          \ =>\n{\n    ...\n    $RES.set('$TYPE')\n}\n"
+      - focus-metavariable: $REQ
+      - pattern-either:
+        - pattern: params
+        - pattern: query
+        - pattern: body
+    severity: WARNING
+- rules:
+  - id: var-in-script-tag
+    languages:
+    - generic
+    message: Detected a template variable used in a script tag. Although template
+      variables are HTML escaped, HTML escaping does not always prevent cross-site
+      scripting (XSS) attacks when used directly in JavaScript. If you need this data
+      on the rendered page, consider placing it in the HTML portion (outside of a
+      script tag). Alternatively, use a JavaScript-specific encoder, such as the one
+      available in OWASP ESAPI.
+    metadata:
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-79: Improper Neutralization of Input During Web Page Generation (''Cross-site
+        Scripting'')'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      likelihood: LOW
+      owasp:
+      - A07:2017 - Cross-Site Scripting (XSS)
+      - A03:2021 - Injection
+      references:
+      - https://www.veracode.com/blog/secure-development/nodejs-template-engines-why-default-encoders-are-not-enough
+      - https://github.com/ESAPI/owasp-esapi-js
+      subcategory:
+      - audit
+      technology:
+      - express
+    paths:
+      include:
+      - '*.ejs'
+      - '*.html'
+    patterns:
+    - pattern-inside: <script ...> ... </script>
+    - pattern-not-inside: <script ... $ATTR = "..." ...>
+    - pattern-not-inside: <script ... $ATTR = '...' ...>
+    - pattern: <% ... >
+    severity: WARNING
+- rules:
+  - id: var-in-href
+    languages:
+    - regex
+    message: 'Detected a template variable used in an anchor tag with the ''href''
+      attribute. This allows a malicious actor to input the ''javascript:'' URI and
+      is subject to cross- site scripting (XSS) attacks. If using a relative URL,
+      start with a literal forward slash and concatenate the URL, like this: href=''/<%=
+      link %>''. You may also consider setting the Content Security Policy (CSP) header.'
+    metadata:
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-79: Improper Neutralization of Input During Web Page Generation (''Cross-site
+        Scripting'')'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      likelihood: LOW
+      owasp:
+      - A07:2017 - Cross-Site Scripting (XSS)
+      - A03:2021 - Injection
+      references:
+      - https://flask.palletsprojects.com/en/1.1.x/security/#cross-site-scripting-xss#:~:text=javascript:%20URI
+      - https://github.com/pugjs/pug/issues/2952
+      subcategory:
+      - audit
+      technology:
+      - express
+    paths:
+      include:
+      - '*.ejs'
+      - '*.html'
+    pattern-regex: <a.*href\s*=[^>]*?[^\/&=]<%.*?%>.*?>
+    severity: WARNING
+- rules:
+  - fix-regex:
+      regex: <%-(.*?)%>
+      replacement: <%=\1%>
+    id: template-explicit-unescape
+    languages:
+    - regex
+    message: Detected an explicit unescape in an EJS template, using '<%- ... %>'
+      If external data can reach these locations, your application is exposed to a
+      cross-site scripting (XSS) vulnerability. Use '<%= ... %>' to escape this data.
+      If you need escaping, ensure no external data can reach this location.
+    metadata:
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-79: Improper Neutralization of Input During Web Page Generation (''Cross-site
+        Scripting'')'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      likelihood: LOW
+      owasp:
+      - A07:2017 - Cross-Site Scripting (XSS)
+      - A03:2021 - Injection
+      references:
+      - http://www.managerjs.com/blog/2015/05/will-ejs-escape-save-me-from-xss-sorta/
+      subcategory:
+      - audit
+      technology:
+      - express
+    paths:
+      include:
+      - '*.ejs'
+      - '*.html'
+    pattern-regex: <%-((?!include).)*?%>
+    severity: WARNING
+- rules:
+  - id: var-in-script-src
+    languages:
+    - generic
+    message: Detected a template variable used as the 'src' in a script tag. Although
+      template variables are HTML escaped, HTML escaping does not always prevent malicious
+      URLs from being injected and could results in a cross-site scripting (XSS) vulnerability.
+      Prefer not to dynamically generate the 'src' attribute and use static URLs instead.
+      If you must do this, carefully check URLs against an allowlist and be sure to
+      URL-encode the result.
+    metadata:
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-79: Improper Neutralization of Input During Web Page Generation (''Cross-site
+        Scripting'')'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      likelihood: LOW
+      owasp:
+      - A07:2017 - Cross-Site Scripting (XSS)
+      - A03:2021 - Injection
+      references:
+      - https://www.veracode.com/blog/secure-development/nodejs-template-engines-why-default-encoders-are-not-enough
+      - https://github.com/ESAPI/owasp-esapi-js
+      subcategory:
+      - audit
+      technology:
+      - express
+    paths:
+      include:
+      - '*.ejs'
+      - '*.html'
+    patterns:
+    - pattern-inside: <script ...>
+    - pattern-either:
+      - pattern-inside: src = '...'
+      - pattern-inside: src = "..."
+    - pattern: <% ... >
+    severity: WARNING
+- rules:
+  - id: var-in-script-tag
+    languages:
+    - regex
+    message: Detected a template variable used in a script tag. Although template
+      variables are HTML escaped, HTML escaping does not always prevent cross-site
+      scripting (XSS) attacks when used directly in JavaScript. If you need this data
+      on the rendered page, consider placing it in the HTML portion (outside of a
+      script tag). Alternatively, use a JavaScript-specific encoder, such as the one
+      available in OWASP ESAPI.
+    metadata:
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-79: Improper Neutralization of Input During Web Page Generation (''Cross-site
+        Scripting'')'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      likelihood: LOW
+      owasp:
+      - A07:2017 - Cross-Site Scripting (XSS)
+      - A03:2021 - Injection
+      references:
+      - https://www.veracode.com/blog/secure-development/nodejs-template-engines-why-default-encoders-are-not-enough
+      - https://github.com/ESAPI/owasp-esapi-js
+      subcategory:
+      - audit
+      technology:
+      - express
+    paths:
+      include:
+      - '*.pug'
+    pattern-either:
+    - pattern-regex: script\s*=[A-Za-z0-9]+
+    - pattern-regex: script\s*=.*["']\s*\+.*
+    - pattern-regex: script\s*=[^'"]+\+.*
+    - pattern-regex: script\(.*?\)\s*=\s*[A-Za-z0-9]+
+    - pattern-regex: script\(.*?\)\s*=\s*.*["']\s*\+.*
+    - pattern-regex: script\(.*?\)\s*=\s*[^'"]+\+.*
+    severity: WARNING
+- rules:
+  - id: template-and-attributes
+    languages:
+    - regex
+    message: Detected a unescaped variables using '&attributes'. If external data
+      can reach these locations, your application is exposed to a cross-site scripting
+      (XSS) vulnerability. If you must do this, ensure no external data can reach
+      this location.
+    metadata:
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-79: Improper Neutralization of Input During Web Page Generation (''Cross-site
+        Scripting'')'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      likelihood: LOW
+      owasp:
+      - A07:2017 - Cross-Site Scripting (XSS)
+      - A03:2021 - Injection
+      references:
+      - https://pugjs.org/language/attributes.html#attributes
+      subcategory:
+      - audit
+      technology:
+      - express
+    paths:
+      include:
+      - '*.pug'
+    pattern-regex: .*&attributes.*
+    severity: WARNING
+- rules:
+  - id: var-in-href
+    languages:
+    - regex
+    message: 'Detected a template variable used in an anchor tag with the ''href''
+      attribute. This allows a malicious actor to input the ''javascript:'' URI and
+      is subject to cross- site scripting (XSS) attacks. If using a relative URL,
+      start with a literal forward slash and concatenate the URL, like this: a(href=''/''+url).
+      You may also consider setting the Content Security Policy (CSP) header.'
+    metadata:
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-79: Improper Neutralization of Input During Web Page Generation (''Cross-site
+        Scripting'')'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      likelihood: LOW
+      owasp:
+      - A07:2017 - Cross-Site Scripting (XSS)
+      - A03:2021 - Injection
+      references:
+      - https://github.com/pugjs/pug/issues/2952
+      - https://flask.palletsprojects.com/en/1.1.x/security/#cross-site-scripting-xss#:~:text=javascript:%20URI
+      subcategory:
+      - audit
+      technology:
+      - express
+    paths:
+      include:
+      - '*.pug'
+    pattern-regex: a\(.*href=[^'"].*\)
+    severity: WARNING
+- rules:
+  - id: template-explicit-unescape
+    languages:
+    - regex
+    message: Detected an explicit unescape in a Pug template, using either '!=' or
+      '!{...}'. If external data can reach these locations, your application is exposed
+      to a cross-site scripting (XSS) vulnerability. If you must do this, ensure no
+      external data can reach this location.
+    metadata:
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-79: Improper Neutralization of Input During Web Page Generation (''Cross-site
+        Scripting'')'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      likelihood: LOW
+      owasp:
+      - A07:2017 - Cross-Site Scripting (XSS)
+      - A03:2021 - Injection
+      references:
+      - https://pugjs.org/language/code.html#unescaped-buffered-code
+      - https://pugjs.org/language/attributes.html#unescaped-attributes
+      subcategory:
+      - audit
+      technology:
+      - express
+    paths:
+      include:
+      - '*.pug'
+    pattern-either:
+    - pattern-regex: \w.*(!=)[^=].*
+    - pattern-regex: '!{.*?}'
+    severity: WARNING
+- rules:
+  - id: var-in-script-tag
+    languages:
+    - generic
+    message: Detected a template variable used in a script tag. Although template
+      variables are HTML escaped, HTML escaping does not always prevent cross-site
+      scripting (XSS) attacks when used directly in JavaScript. If you need this data
+      on the rendered page, consider placing it in the HTML portion (outside of a
+      script tag). Alternatively, use a JavaScript-specific encoder, such as the one
+      available in OWASP ESAPI.
+    metadata:
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-79: Improper Neutralization of Input During Web Page Generation (''Cross-site
+        Scripting'')'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      likelihood: LOW
+      owasp:
+      - A07:2017 - Cross-Site Scripting (XSS)
+      - A03:2021 - Injection
+      references:
+      - https://www.veracode.com/blog/secure-development/nodejs-template-engines-why-default-encoders-are-not-enough
+      - https://github.com/ESAPI/owasp-esapi-js
+      subcategory:
+      - audit
+      technology:
+      - express
+    paths:
+      include:
+      - '*.mustache'
+      - '*.hbs'
+      - '*.html'
+    patterns:
+    - pattern-inside: <script ...> ... </script>
+    - pattern: '{{ ... }}'
+    severity: WARNING
+- rules:
+  - id: template-explicit-unescape
+    languages:
+    - regex
+    message: Detected an explicit unescape in a Mustache template, using triple braces
+      '{{{...}}}' or ampersand '&'. If external data can reach these locations, your
+      application is exposed to a cross-site scripting (XSS) vulnerability. If you
+      must do this, ensure no external data can reach this location.
+    metadata:
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-79: Improper Neutralization of Input During Web Page Generation (''Cross-site
+        Scripting'')'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      likelihood: LOW
+      owasp:
+      - A07:2017 - Cross-Site Scripting (XSS)
+      - A03:2021 - Injection
+      references:
+      - https://github.com/janl/mustache.js/#variables
+      - https://ractive.js.org/v0.x/0.7/mustaches#variables
+      subcategory:
+      - audit
+      technology:
+      - express
+    paths:
+      include:
+      - '*.mustache'
+      - '*.hbs'
+      - '*.html'
+    pattern-either:
+    - pattern-regex: '{{{((?!include).)*?}}}'
+    - pattern-regex: '{{[\\s]*&.*}}'
+    severity: WARNING
+- rules:
+  - id: escape-function-overwrite
+    languages:
+    - javascript
+    - typescript
+    message: 'The Mustache escape function is being overwritten. This could bypass
+      HTML escaping safety measures built into the rendering engine, exposing your
+      application to cross-site scripting (XSS) vulnerabilities. If you need unescaped
+      HTML, use the triple brace operator in your template: ''{{{ ... }}}''.'
+    metadata:
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-79: Improper Neutralization of Input During Web Page Generation (''Cross-site
+        Scripting'')'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      likelihood: LOW
+      owasp:
+      - A07:2017 - Cross-Site Scripting (XSS)
+      - A03:2021 - Injection
+      references:
+      - https://github.com/janl/mustache.js/#variables
+      subcategory:
+      - audit
+      technology:
+      - express
+    pattern-either:
+    - pattern: Mustache.escape = ...
+    - patterns:
+      - pattern-inside: '$MUSTACHE = require("mustache");
+
+          ...
+
+          '
+      - pattern: $MUSTACHE.escape = ...
+    severity: WARNING

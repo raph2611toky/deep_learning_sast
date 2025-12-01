@@ -1,0 +1,177 @@
+- rules:
+  - id: command-injection-shell-call
+    languages:
+    - clojure
+    message: A call to clojure.java.shell has been found, this could lead to an RCE
+      if the inputs are user-controllable. Please ensure their origin is validated
+      and sanitized.
+    metadata:
+      author: Gabriel Marquet <gab.marquet@gmail.com>
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-78: Improper Neutralization of Special Elements used in an OS Command
+        (''OS Command Injection'')'
+      impact: HIGH
+      likelihood: MEDIUM
+      owasp:
+      - A01:2017 - Injection
+      - A03:2021 - Injection
+      references:
+      - https://clojuredocs.org/clojure.java.shell/sh
+      subcategory:
+      - audit
+      technology:
+      - clojure
+    patterns:
+    - pattern-either:
+      - pattern-inside: "(ns ...\n...\n(:require \n... \n[clojure.java.shell ... [sh]]\n\
+          ...\n))\n...\n"
+      - pattern-inside: "(ns ...\n...\n(:use \n... \n[clojure.java.shell ... [sh]]\n\
+          ...\n))\n...\n"
+    - pattern-either:
+      - patterns:
+        - pattern: (sh $BASH ...)
+        - metavariable-regex:
+            metavariable: $BASH
+            regex: (.*)(sh|bash|ksh|csh|tcsh|zsh)
+      - patterns:
+        - pattern: (sh $ARG ...)
+        - pattern-not: (sh "..." ...)
+    severity: ERROR
+- rules:
+  - id: documentbuilderfactory-xxe
+    languages:
+    - clojure
+    message: DOCTYPE declarations are enabled for javax.xml.parsers.SAXParserFactory.
+      Without prohibiting external entity declarations, this is vulnerable to XML
+      external entity attacks. Disable this by setting the feature "http://apache.org/xml/features/disallow-doctype-decl"
+      to true. Alternatively, allow DOCTYPE declarations and only prohibit external
+      entities declarations. This can be done by setting the features "http://xml.org/sax/features/external-general-entities"
+      and "http://xml.org/sax/features/external-parameter-entities" to false.
+    metadata:
+      asvs:
+        control_id: 5.5.2 Insecue XML Deserialization
+        control_url: https://github.com/OWASP/ASVS/blob/master/4.0/en/0x13-V5-Validation-Sanitization-Encoding.md#v55-deserialization-prevention
+        section: V5 Validation, Sanitization and Encoding
+        version: '4'
+      category: security
+      confidence: HIGH
+      cwe:
+      - 'CWE-611: Improper Restriction of XML External Entity Reference'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: HIGH
+      likelihood: LOW
+      owasp:
+      - A04:2017 - XML External Entities (XXE)
+      - A05:2021 - Security Misconfiguration
+      references:
+      - https://semgrep.dev/blog/2022/xml-security-in-java
+      - https://semgrep.dev/docs/cheat-sheets/java-xxe/
+      - https://xerces.apache.org/xerces2-j/features.html
+      source-rule-url: https://github.com/clj-holmes/clj-holmes-rules/blob/main/security/xxe-clojure-xml/xxe-clojure-xml.yml
+      subcategory:
+      - vuln
+      technology:
+      - clojure
+      - xml
+    patterns:
+    - pattern-inside: '(ns ... (:require [clojure.xml :as ...]))
+
+        ...
+
+        '
+    - pattern-either:
+      - pattern-inside: '(def ... ... ( ... ))
+
+          '
+      - pattern-inside: '(defn ... ... ( ... ))
+
+          '
+    - pattern-either:
+      - pattern: (clojure.xml/parse $INPUT)
+      - patterns:
+        - pattern-inside: '(doto (javax.xml.parsers.SAXParserFactory/newInstance)
+            ...)
+
+            '
+        - pattern: (.setFeature "http://apache.org/xml/features/disallow-doctype-decl"
+            false)
+        - pattern-not-inside: "(doto (javax.xml.parsers.SAXParserFactory/newInstance)\n\
+            \  ...\n  (.setFeature \"http://xml.org/sax/features/external-general-entities\"\
+            \ false)\n  ...\n  (.setFeature \"http://xml.org/sax/features/external-parameter-entities\"\
+            \ false)\n  ...)\n"
+        - pattern-not-inside: "(doto (javax.xml.parsers.SAXParserFactory/newInstance)\n\
+            \  ...\n  (.setFeature \"http://xml.org/sax/features/external-parameter-entities\"\
+            \ false)\n  ...\n  (.setFeature \"http://xml.org/sax/features/external-general-entities\"\
+            \ false)\n  ...)\n"
+    severity: ERROR
+- rules:
+  - id: use-of-md5
+    languages:
+    - clojure
+    message: MD5 hash algorithm detected. This is not collision resistant and leads
+      to easily-cracked password hashes. Replace with current recommended hashing
+      algorithms.
+    metadata:
+      author: Gabriel Marquet <gab.marquet@gmail.com>
+      category: security
+      confidence: HIGH
+      cwe:
+      - 'CWE-328: Use of Weak Hash'
+      impact: HIGH
+      likelihood: MEDIUM
+      owasp:
+      - A03:2017 - Sensitive Data Exposure
+      - A02:2021 - Cryptographic Failures
+      references:
+      - https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html
+      - https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
+      source-rule-url: https://github.com/clj-holmes/clj-holmes-rules/blob/main/security/weak-hash-function-md5.yml
+      subcategory:
+      - vuln
+      technology:
+      - clojure
+    pattern-either:
+    - pattern: (MessageDigest/getInstance "MD5")
+    - pattern: (MessageDigest/getInstance MessageDigestAlgorithms/MD5)
+    - pattern: (MessageDigest/getInstance org.apache.commons.codec.digest.MessageDigestAlgorithms/MD5)
+    - pattern: (java.security.MessageDigest/getInstance "MD5")
+    - pattern: (java.security.MessageDigest/getInstance MessageDigestAlgorithms/MD5)
+    - pattern: (java.security.MessageDigest/getInstance org.apache.commons.codec.digest.MessageDigestAlgorithms/MD5)
+    severity: WARNING
+- rules:
+  - id: use-of-sha1
+    languages:
+    - clojure
+    message: Detected SHA1 hash algorithm which is considered insecure. SHA1 is not
+      collision resistant and is therefore not suitable as a cryptographic signature.
+      Instead, use PBKDF2 for password hashing or SHA256 or SHA512 for other hash
+      function applications.
+    metadata:
+      category: security
+      confidence: HIGH
+      cwe:
+      - 'CWE-327: Use of a Broken or Risky Cryptographic Algorithm'
+      - 'CWE-328: Use of Weak Hash'
+      impact: HIGH
+      likelihood: MEDIUM
+      owasp:
+      - A03:2017 - Sensitive Data Exposure
+      - A02:2021 - Cryptographic Failures
+      references:
+      - https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html
+      - https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
+      subcategory:
+      - vuln
+      technology:
+      - clojure
+    patterns:
+    - pattern-either:
+      - pattern: (MessageDigest/getInstance $ALGO)
+      - pattern: (java.security.MessageDigest/getInstance $ALGO)
+    - metavariable-regex:
+        metavariable: $ALGO
+        regex: (((org\.apache\.commons\.codec\.digest\.)?MessageDigestAlgorithms/)?"?(SHA-1|SHA1)"?)
+    severity: WARNING

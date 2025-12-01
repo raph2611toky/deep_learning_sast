@@ -1,0 +1,149 @@
+- rules:
+  - fix: $MODULE.to_existing_atom($STRING)
+    id: atom_exhaustion
+    languages:
+    - elixir
+    message: Atom values are appended to a global table but never removed. If input
+      is user-controlled, dynamic instantiations such as `String.to_atom` or `List.to_atom`
+      can lead to possible memory leaks. Instead, use `String.to_existing_atom` or
+      `List.to_existing_atom`.
+    metadata:
+      category: correctness
+      references:
+      - https://erlef.github.io/security-wg/secure_coding_and_deployment_hardening/atom_exhaustion.html
+      technology:
+      - elixir
+    patterns:
+    - pattern: $MODULE.to_atom($STRING)
+    - metavariable-regex:
+        metavariable: $MODULE
+        regex: ^(String|List)$
+    severity: ERROR
+- rules:
+  - fix: '$E
+
+      |> Enum.into($INTO, $FUN end)
+
+      '
+    id: enum_map_into
+    languages:
+    - elixir
+    message: Using `Enum.into/3` is more efficient than using `Enum.map/2 |> Enum.into/2`.
+    metadata:
+      category: best-practice
+      references:
+      - https://github.com/rrrene/credo/blob/master/lib/credo/check/refactor/map_into.ex
+      technology:
+      - elixir
+    pattern-either:
+    - pattern: 'Enum.into(Enum.map($E, $FUN), $INTO)
+
+        '
+    - pattern: 'Enum.map($E, $FUN)
+
+        |> Enum.into($INTO)
+
+        '
+    - pattern: '$E
+
+        |> Enum.map($FUN)
+
+        |> Enum.into($INTO)
+
+        '
+    severity: WARNING
+- rules:
+  - fix: Bitwise.bxor($LEFT, $RIGHT)
+    id: deprecated_bxor_operator
+    languages:
+    - elixir
+    message: The bitwise operator (`^^^`) is already deprecated. Please use `Bitwise.bxor($LEFT,
+      $RIGHT)` instead.
+    metadata:
+      category: best-practice
+      references:
+      - https://github.com/elixir-lang/elixir/commit/c9a171da5b25e0eb5d1da3b04c622f8b79a8aff4
+      technology:
+      - elixir
+    pattern: $LEFT ^^^ $RIGHT
+    severity: WARNING
+- rules:
+  - fix: '$E
+
+      |> Enum.map_join($JOINER, $FUN end)
+
+      '
+    id: enum_map_join
+    languages:
+    - elixir
+    message: Using `Enum.map_join/3` is more efficient than using `Enum.map/2 |> Enum.join/2`.
+    metadata:
+      category: best-practice
+      references:
+      - https://github.com/rrrene/credo/blob/master/lib/credo/check/refactor/map_join.ex
+      technology:
+      - elixir
+    pattern-either:
+    - pattern: 'Enum.join(Enum.map($E, $FUN), $JOINER)
+
+        '
+    - pattern: 'Enum.map($E, $FUN)
+
+        |> Enum.join($JOINER)
+
+        '
+    - pattern: '$E
+
+        |> Enum.map($FUN)
+
+        |> Enum.join($JOINER)
+
+        '
+    severity: WARNING
+- rules:
+  - fix: import Bitwise
+    id: deprecated_use_bitwise
+    languages:
+    - elixir
+    message: The syntax `use Bitwise` is already deprecated. Please use `import Bitwise`
+      instead.
+    metadata:
+      category: best-practice
+      references:
+      - https://github.com/elixir-lang/elixir/commit/f1b9d3e818e5bebd44540f87be85979f24b9abfc
+      technology:
+      - elixir
+    pattern: use Bitwise
+    severity: WARNING
+- rules:
+  - fix: '{$VAR, _, _} = Calendar.ISO.day_of_week($YEAR, $MONTH, $DAY, :default)
+
+      '
+    id: deprecated_calendar_iso_day_of_week_3
+    languages:
+    - elixir
+    message: '`Calendar.ISO.day_of_week/3` is already deprecated. Please use `Calendar.ISO.day_of_week/4`
+      instead.'
+    metadata:
+      category: best-practice
+      references:
+      - https://github.com/elixir-lang/elixir/releases/tag/v1.15.0
+      technology:
+      - elixir
+    pattern: $VAR = Calendar.ISO.day_of_week($YEAR, $MONTH, $DAY)
+    severity: WARNING
+- rules:
+  - fix: Bitwise.bnot($VAL)
+    id: deprecated_bnot_operator
+    languages:
+    - elixir
+    message: The bitwise operator (`^^^`) is already deprecated. Please use `Bitwise.bnot($VAL)`
+      instead.
+    metadata:
+      category: best-practice
+      references:
+      - https://github.com/elixir-lang/elixir/commit/f1b9d3e818e5bebd44540f87be85979f24b9abfc
+      technology:
+      - elixir
+    pattern: ~~~$VAL
+    severity: WARNING

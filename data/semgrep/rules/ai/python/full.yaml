@@ -1,0 +1,147 @@
+- rules:
+  - id: detect-tensorflow
+    languages:
+    - python
+    message: 'Possibly found usage of AI tooling: Tensorflow'
+    metadata:
+      category: maintainability
+      confidence: LOW
+      references:
+      - https://semgrep.dev/blog/2024/detecting-shadow-ai
+      technology:
+      - genAI
+      - LLMs
+    pattern-either:
+    - pattern: import tensorflow
+    severity: INFO
+- rules:
+  - id: detect-anthropic
+    languages:
+    - python
+    message: 'Possibly found usage of AI: Anthropic'
+    metadata:
+      category: maintainability
+      confidence: LOW
+      references:
+      - https://semgrep.dev/blog/2024/detecting-shadow-ai
+      technology:
+      - genAI
+      - LLMs
+    pattern-either:
+    - pattern: import anthropic
+    - pattern: from anthropic import $ANYTHING
+    - pattern: Anthropic(...)
+    - pattern: anthropic.Anthropic(...)
+    - pattern: $CLIENT.messages.$FUNC(...,model=...,...)
+    severity: INFO
+- rules:
+  - id: detect-langchain
+    languages:
+    - python
+    message: 'Possibly found usage of AI tooling: LangChain'
+    metadata:
+      category: maintainability
+      confidence: LOW
+      references:
+      - https://semgrep.dev/blog/2024/detecting-shadow-ai
+      technology:
+      - genAI
+      - LLMs
+    pattern-either:
+    - pattern: import langchain_openai
+    - pattern: ChatOpenAI(...)
+    - pattern: import langchain_community
+    - pattern: Ollama(...)
+    - pattern: import langchain_anthropic
+    - pattern: ChatAnthropic(...)
+    - pattern: import langchain_cohere
+    - pattern: ChatCohere(...)
+    - pattern: import langchain_core
+    - pattern: import langchain
+    severity: INFO
+- rules:
+  - id: detect-huggingface
+    languages:
+    - python
+    message: 'Possibly found usage of AI: HuggingFace'
+    metadata:
+      category: maintainability
+      confidence: LOW
+      references:
+      - https://semgrep.dev/blog/2024/detecting-shadow-ai
+      technology:
+      - genAI
+      - LLMs
+    pattern-either:
+    - pattern: import huggingface_hub
+    severity: INFO
+- rules:
+  - id: detect-openai
+    languages:
+    - python
+    message: 'Possibly found usage of AI: OpenAI'
+    metadata:
+      category: maintainability
+      confidence: LOW
+      references:
+      - https://semgrep.dev/blog/2024/detecting-shadow-ai
+      technology:
+      - genAI
+      - LLMs
+    pattern-either:
+    - pattern: import openai
+    - pattern: from openai import $ANYTHING
+    - pattern: OpenAI(...)
+    - pattern: $CLIENT.chat.completions.$FUNC(...)
+    severity: INFO
+- rules:
+  - id: detect-mistral
+    languages:
+    - python
+    message: 'Possibly found usage of AI: Mistral'
+    metadata:
+      category: maintainability
+      confidence: LOW
+      references:
+      - https://semgrep.dev/blog/2024/detecting-shadow-ai
+      technology:
+      - genAI
+      - LLMs
+    pattern-either:
+    - pattern: import mistralai
+    - pattern: MistralClient(...)
+    - pattern: $CLIENT.chat(...,model=...,...)
+    severity: INFO
+- rules:
+  - id: detect-pytorch
+    languages:
+    - python
+    message: 'Possibly found usage of AI tooling: PyTorch'
+    metadata:
+      category: maintainability
+      confidence: LOW
+      references:
+      - https://semgrep.dev/blog/2024/detecting-shadow-ai
+      technology:
+      - genAI
+      - LLMs
+    pattern-either:
+    - pattern: import torch
+    - pattern: torch.$FUNC(...)
+    severity: INFO
+- rules:
+  - id: detect-gemini
+    languages:
+    - python
+    message: 'Possibly found usage of AI: Gemini'
+    metadata:
+      category: maintainability
+      confidence: LOW
+      references:
+      - https://semgrep.dev/blog/2024/detecting-shadow-ai
+      technology:
+      - genAI
+      - LLMs
+    pattern-either:
+    - pattern: import google.generativeai
+    severity: INFO

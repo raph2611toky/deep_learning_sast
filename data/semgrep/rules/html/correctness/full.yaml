@@ -1,0 +1,17 @@
+- rules:
+  - fix-regex:
+      regex: https-equiv=
+      replacement: http-equiv=
+    id: https-equiv
+    languages:
+    - html
+    message: The correct attribute name for this meta tag is `http-equiv`, not `https-equiv`.
+    metadata:
+      category: correctness
+      references:
+      - https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta#http-equiv
+      technology:
+      - html
+    pattern-either:
+    - pattern: <meta ... https-equiv=...>
+    severity: ERROR

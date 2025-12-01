@@ -1,0 +1,34 @@
+- rules:
+  - id: detect-openai
+    languages:
+    - go
+    message: 'Possibly found usage of AI: OpenAI'
+    metadata:
+      category: maintainability
+      confidence: LOW
+      references:
+      - https://semgrep.dev/blog/2024/detecting-shadow-ai
+      technology:
+      - genAI
+      - LLMs
+    pattern-either:
+    - pattern: import "github.com/sashabaranov/go-openai"
+    - pattern: gogpt.NewClient(...)
+    severity: INFO
+- rules:
+  - id: detect-gemini
+    languages:
+    - go
+    message: 'Possibly found usage of AI: Gemini'
+    metadata:
+      category: maintainability
+      confidence: LOW
+      references:
+      - https://semgrep.dev/blog/2024/detecting-shadow-ai
+      technology:
+      - genAI
+      - LLMs
+    pattern-either:
+    - pattern: import "github.com/google/generative-ai-go"
+    - pattern: genai.NewClient(...)
+    severity: INFO

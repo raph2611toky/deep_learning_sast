@@ -1,0 +1,69 @@
+- rules:
+  - id: detect-generic-ai-gem
+    languages:
+    - generic
+    message: 'Possibly found usage of AI: Gemini'
+    metadata:
+      category: maintainability
+      confidence: LOW
+      references:
+      - https://semgrep.dev/blog/2024/detecting-shadow-ai
+      technology:
+      - genAI
+      - LLMs
+    pattern-either:
+    - pattern: google/generative-ai
+    - pattern: GoogleGenerativeAI
+    severity: INFO
+- rules:
+  - id: detect-generic-ai-api
+    languages:
+    - generic
+    message: 'Possibly found usage of AI: HTTP Request'
+    metadata:
+      category: maintainability
+      confidence: LOW
+      references:
+      - https://semgrep.dev/blog/2024/detecting-shadow-ai
+      technology:
+      - genAI
+      - LLMs
+    pattern-either:
+    - pattern: /chat/completions
+    - pattern: api.openai.com
+    severity: INFO
+- rules:
+  - id: detect-generic-ai-oai
+    languages:
+    - generic
+    message: 'Possibly found usage of AI: OpenAI'
+    metadata:
+      category: maintainability
+      confidence: LOW
+      references:
+      - https://semgrep.dev/blog/2024/detecting-shadow-ai
+      technology:
+      - genAI
+      - LLMs
+    pattern-either:
+    - pattern: openai
+    - pattern: OpenAI
+    severity: INFO
+- rules:
+  - id: detect-generic-ai-anthprop
+    languages:
+    - generic
+    message: 'Possibly found usage of AI: Anthropic'
+    metadata:
+      category: maintainability
+      confidence: LOW
+      references:
+      - https://semgrep.dev/blog/2024/detecting-shadow-ai
+      technology:
+      - genAI
+      - LLMs
+    pattern-either:
+    - pattern: anthropic
+    - pattern: Anthropic
+    - pattern: claude
+    severity: INFO

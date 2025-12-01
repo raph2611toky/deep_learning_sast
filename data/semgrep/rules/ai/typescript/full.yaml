@@ -1,0 +1,117 @@
+- rules:
+  - id: detect-promptfoo
+    languages:
+    - js
+    - ts
+    message: 'Possibly found usage of AI tooling: promptfoo'
+    metadata:
+      category: maintainability
+      confidence: LOW
+      references:
+      - https://semgrep.dev/blog/2024/detecting-shadow-ai
+      technology:
+      - genAI
+      - LLMs
+    pattern-either:
+    - pattern: import "promptfoo"
+    - pattern: promptfoo.evaluate(...)
+    severity: INFO
+- rules:
+  - id: detect-anthropic
+    languages:
+    - js
+    - ts
+    message: 'Possibly found usage of AI: Anthropic'
+    metadata:
+      category: maintainability
+      confidence: LOW
+      references:
+      - https://semgrep.dev/blog/2024/detecting-shadow-ai
+      technology:
+      - genAI
+      - LLMs
+    pattern-either:
+    - pattern: import "@anthropic-ai"
+    - pattern: import $ANYTHING from "@anthropic-ai";
+    - pattern: new Anthropic(...)
+    - pattern: anthropic.messages.$FUNC(...)
+    severity: INFO
+- rules:
+  - id: detect-openai
+    languages:
+    - js
+    - ts
+    message: 'Possibly found usage of AI: OpenAI'
+    metadata:
+      category: maintainability
+      confidence: LOW
+      references:
+      - https://semgrep.dev/blog/2024/detecting-shadow-ai
+      technology:
+      - genAI
+      - LLMs
+    pattern-either:
+    - pattern: import "openai"
+    - pattern: import $ANYTHING from "openai";
+    - pattern: new OpenAI(...)
+    - pattern: $CLIENT.chat.completions.$FUNC(...)
+    severity: INFO
+- rules:
+  - id: detect-mistral
+    languages:
+    - js
+    - ts
+    message: 'Possibly found usage of AI: Mistral'
+    metadata:
+      category: maintainability
+      confidence: LOW
+      references:
+      - https://semgrep.dev/blog/2024/detecting-shadow-ai
+      technology:
+      - genAI
+      - LLMs
+    pattern-either:
+    - pattern: import "@mistralai"
+    - pattern: new MistralClient(...)
+    - pattern: '$CLIENT.chat({model: ...})'
+    severity: INFO
+- rules:
+  - id: detect-vercel-ai
+    languages:
+    - js
+    - ts
+    message: 'Possibly found usage of AI: VercelAI'
+    metadata:
+      category: maintainability
+      confidence: LOW
+      references:
+      - https://semgrep.dev/blog/2024/detecting-shadow-ai
+      technology:
+      - genAI
+      - LLMs
+    pattern-either:
+    - pattern: import "ai"
+    - pattern: import "@ai-sdk"
+    - pattern: generateText({model:...})
+    - pattern: generateText({prompt:...})
+    severity: INFO
+- rules:
+  - id: detect-gemini
+    languages:
+    - js
+    - ts
+    message: 'Possibly found usage of AI: Gemini'
+    metadata:
+      category: maintainability
+      confidence: LOW
+      references:
+      - https://semgrep.dev/blog/2024/detecting-shadow-ai
+      technology:
+      - genAI
+      - LLMs
+    pattern-either:
+    - pattern: import "@google/generative-ai"
+    - pattern: import $ANYTHING from "@google/generative-ai";
+    - pattern: new GoogleGenerativeAI(...)
+    - pattern: $GENAI.getGenerativeModel(...)
+    severity: INFO

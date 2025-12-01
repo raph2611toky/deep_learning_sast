@@ -1,0 +1,583 @@
+- rules:
+  - id: laravel-api-route-sql-injection
+    languages:
+    - php
+    message: HTTP method [$METHOD] to Laravel route $ROUTE_NAME is vulnerable to SQL
+      injection via string concatenation or unsafe interpolation.
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-89: Improper Neutralization of Special Elements used in an SQL Command
+        (''SQL Injection'')'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      likelihood: HIGH
+      owasp:
+      - A01:2017 - Injection
+      - A03:2021 - Injection
+      references:
+      - https://github.com/OWASP/CheatSheetSeries/blob/master/cheatsheets/Laravel_Cheat_Sheet.md
+      subcategory:
+      - vuln
+      technology:
+      - php
+      - laravel
+    mode: taint
+    pattern-sanitizers:
+    - patterns:
+      - pattern: 'DB::raw("...",[...])
+
+          '
+    pattern-sinks:
+    - patterns:
+      - pattern: 'DB::raw(...)
+
+          '
+    pattern-sources:
+    - patterns:
+      - focus-metavariable: $ARG
+      - pattern-inside: 'Route::$METHOD($ROUTE_NAME, function(...,$ARG,...){...})
+
+          '
+    severity: WARNING
+- rules:
+  - id: laravel-dangerous-model-construction
+    languages:
+    - php
+    message: Setting `$guarded` to an empty array allows mass assignment to every
+      property in a Laravel model. This explicitly overrides Eloquent's safe-by-default
+      mass assignment protections.
+    metadata:
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-915: Improperly Controlled Modification of Dynamically-Determined Object
+        Attributes'
+      impact: MEDIUM
+      likelihood: LOW
+      owasp:
+      - A08:2021 - Software and Data Integrity Failures
+      references:
+      - https://laravel.com/docs/9.x/eloquent#allowing-mass-assignment
+      - https://github.com/OWASP/CheatSheetSeries/blob/master/cheatsheets/Laravel_Cheat_Sheet.md
+      subcategory:
+      - audit
+      technology:
+      - php
+      - laravel
+      - eloquent
+    patterns:
+    - pattern: '$guarded = [];
+
+        '
+    - pattern-inside: "class $CLASS extends Model {\n  ...\n}\n"
+    severity: ERROR
+- rules:
+  - id: laravel-sql-injection
+    languages:
+    - php
+    message: Detected a SQL query based on user input. This could lead to SQL injection,
+      which could potentially result in sensitive data being exfiltrated by attackers.
+      Instead, use parameterized queries and prepared statements.
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-89: Improper Neutralization of Special Elements used in an SQL Command
+        (''SQL Injection'')'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      likelihood: HIGH
+      owasp:
+      - A01:2017 - Injection
+      - A03:2021 - Injection
+      references:
+      - https://laravel.com/docs/8.x/queries
+      subcategory:
+      - vuln
+      technology:
+      - laravel
+    mode: taint
+    pattern-sinks:
+    - patterns:
+      - pattern-either:
+        - patterns:
+          - pattern: $SQL
+          - pattern-either:
+            - pattern-inside: DB::table(...)->whereRaw($SQL, ...)
+            - pattern-inside: DB::table(...)->orWhereRaw($SQL, ...)
+            - pattern-inside: DB::table(...)->groupByRaw($SQL, ...)
+            - pattern-inside: DB::table(...)->havingRaw($SQL, ...)
+            - pattern-inside: DB::table(...)->orHavingRaw($SQL, ...)
+            - pattern-inside: DB::table(...)->orderByRaw($SQL, ...)
+        - patterns:
+          - pattern: $EXPRESSION
+          - pattern-either:
+            - pattern-inside: DB::table(...)->selectRaw($EXPRESSION, ...)
+            - pattern-inside: DB::table(...)->fromRaw($EXPRESSION, ...)
+        - patterns:
+          - pattern: $COLUMNS
+          - pattern-either:
+            - pattern-inside: DB::table(...)->whereNull($COLUMNS, ...)
+            - pattern-inside: DB::table(...)->orWhereNull($COLUMN)
+            - pattern-inside: DB::table(...)->whereNotNull($COLUMNS, ...)
+            - pattern-inside: DB::table(...)->whereRowValues($COLUMNS, ...)
+            - pattern-inside: DB::table(...)->orWhereRowValues($COLUMNS, ...)
+            - pattern-inside: DB::table(...)->find($ID, $COLUMNS)
+            - pattern-inside: DB::table(...)->paginate($PERPAGE, $COLUMNS, ...)
+            - pattern-inside: DB::table(...)->simplePaginate($PERPAGE, $COLUMNS, ...)
+            - pattern-inside: DB::table(...)->cursorPaginate($PERPAGE, $COLUMNS, ...)
+            - pattern-inside: DB::table(...)->getCountForPagination($COLUMNS)
+            - pattern-inside: DB::table(...)->aggregate($FUNCTION, $COLUMNS)
+            - pattern-inside: DB::table(...)->numericAggregate($FUNCTION, $COLUMNS)
+            - pattern-inside: DB::table(...)->insertUsing($COLUMNS, ...)
+            - pattern-inside: DB::table(...)->select($COLUMNS)
+            - pattern-inside: DB::table(...)->get($COLUMNS)
+            - pattern-inside: DB::table(...)->count($COLUMNS)
+        - patterns:
+          - pattern: $COLUMN
+          - pattern-either:
+            - pattern-inside: DB::table(...)->whereIn($COLUMN, ...)
+            - pattern-inside: DB::table(...)->orWhereIn($COLUMN, ...)
+            - pattern-inside: DB::table(...)->whereNotIn($COLUMN, ...)
+            - pattern-inside: DB::table(...)->orWhereNotIn($COLUMN, ...)
+            - pattern-inside: DB::table(...)->whereIntegerInRaw($COLUMN, ...)
+            - pattern-inside: DB::table(...)->orWhereIntegerInRaw($COLUMN, ...)
+            - pattern-inside: DB::table(...)->whereIntegerNotInRaw($COLUMN, ...)
+            - pattern-inside: DB::table(...)->orWhereIntegerNotInRaw($COLUMN, ...)
+            - pattern-inside: DB::table(...)->whereBetweenColumns($COLUMN, ...)
+            - pattern-inside: DB::table(...)->orWhereBetween($COLUMN, ...)
+            - pattern-inside: DB::table(...)->orWhereBetweenColumns($COLUMN, ...)
+            - pattern-inside: DB::table(...)->whereNotBetween($COLUMN, ...)
+            - pattern-inside: DB::table(...)->whereNotBetweenColumns($COLUMN, ...)
+            - pattern-inside: DB::table(...)->orWhereNotBetween($COLUMN, ...)
+            - pattern-inside: DB::table(...)->orWhereNotBetweenColumns($COLUMN, ...)
+            - pattern-inside: DB::table(...)->orWhereNotNull($COLUMN)
+            - pattern-inside: DB::table(...)->whereDate($COLUMN, ...)
+            - pattern-inside: DB::table(...)->orWhereDate($COLUMN, ...)
+            - pattern-inside: DB::table(...)->whereTime($COLUMN, ...)
+            - pattern-inside: DB::table(...)->orWhereTime($COLUMN, ...)
+            - pattern-inside: DB::table(...)->whereDay($COLUMN, ...)
+            - pattern-inside: DB::table(...)->orWhereDay($COLUMN, ...)
+            - pattern-inside: DB::table(...)->whereMonth($COLUMN, ...)
+            - pattern-inside: DB::table(...)->orWhereMonth($COLUMN, ...)
+            - pattern-inside: DB::table(...)->whereYear($COLUMN, ...)
+            - pattern-inside: DB::table(...)->orWhereYear($COLUMN, ...)
+            - pattern-inside: DB::table(...)->whereJsonContains($COLUMN, ...)
+            - pattern-inside: DB::table(...)->orWhereJsonContains($COLUMN, ...)
+            - pattern-inside: DB::table(...)->whereJsonDoesntContain($COLUMN, ...)
+            - pattern-inside: DB::table(...)->orWhereJsonDoesntContain($COLUMN, ...)
+            - pattern-inside: DB::table(...)->whereJsonLength($COLUMN, ...)
+            - pattern-inside: DB::table(...)->orWhereJsonLength($COLUMN, ...)
+            - pattern-inside: DB::table(...)->having($COLUMN, ...)
+            - pattern-inside: DB::table(...)->orHaving($COLUMN, ...)
+            - pattern-inside: DB::table(...)->havingBetween($COLUMN, ...)
+            - pattern-inside: DB::table(...)->orderBy($COLUMN, ...)
+            - pattern-inside: DB::table(...)->orderByDesc($COLUMN)
+            - pattern-inside: DB::table(...)->latest($COLUMN)
+            - pattern-inside: DB::table(...)->oldest($COLUMN)
+            - pattern-inside: DB::table(...)->forPageBeforeId($PERPAGE, $LASTID, $COLUMN)
+            - pattern-inside: DB::table(...)->forPageAfterId($PERPAGE, $LASTID, $COLUMN)
+            - pattern-inside: DB::table(...)->value($COLUMN)
+            - pattern-inside: DB::table(...)->pluck($COLUMN, ...)
+            - pattern-inside: DB::table(...)->implode($COLUMN, ...)
+            - pattern-inside: DB::table(...)->min($COLUMN)
+            - pattern-inside: DB::table(...)->max($COLUMN)
+            - pattern-inside: DB::table(...)->sum($COLUMN)
+            - pattern-inside: DB::table(...)->avg($COLUMN)
+            - pattern-inside: DB::table(...)->average($COLUMN)
+            - pattern-inside: DB::table(...)->increment($COLUMN, ...)
+            - pattern-inside: DB::table(...)->decrement($COLUMN, ...)
+            - pattern-inside: DB::table(...)->where($COLUMN, ...)
+            - pattern-inside: DB::table(...)->orWhere($COLUMN, ...)
+            - pattern-inside: DB::table(...)->addSelect($COLUMN)
+        - patterns:
+          - pattern: $QUERY
+          - pattern-inside: DB::unprepared($QUERY)
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern: $_GET
+        - pattern: $_POST
+        - pattern: $_COOKIE
+        - pattern: $_REQUEST
+        - pattern: $_SERVER
+    severity: WARNING
+- rules:
+  - id: laravel-cookie-http-only
+    languages:
+    - php
+    message: 'Found a configuration file where the HttpOnly attribute is not set to
+      true. Setting `http_only` to true makes sure that your cookies are inaccessible
+      from Javascript, which mitigates XSS attacks. Instead, set the ''http_only''
+      like so: `http_only` => true '
+    metadata:
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-1004: Sensitive Cookie Without ''HttpOnly'' Flag'
+      impact: LOW
+      likelihood: LOW
+      owasp:
+      - A05:2021 - Security Misconfiguration
+      references:
+      - https://github.com/OWASP/CheatSheetSeries/blob/master/cheatsheets/Laravel_Cheat_Sheet.md
+      subcategory:
+      - audit
+      technology:
+      - php
+      - laravel
+    paths:
+      include:
+      - '*session.php'
+    patterns:
+    - pattern: '''cookie''
+
+        '
+    - pattern-inside: "return [\n  ...,\n  'cookie' => env(...),\n  ...\n];\n"
+    - pattern-not-inside: "return [\n  ...,\n  'http_only' => true,\n  ...\n];\n"
+    - pattern-not-inside: "return [\n  ...,\n  'http_only' => env('$NAME', $DEFAULT),\n\
+        \  ...\n];\n"
+    severity: ERROR
+- rules:
+  - id: laravel-unsafe-validator
+    languages:
+    - php
+    message: Found a request argument passed to an `ignore()` definition in a Rule
+      constraint. This can lead to SQL injection.
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-89: Improper Neutralization of Special Elements used in an SQL Command
+        (''SQL Injection'')'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      likelihood: HIGH
+      owasp:
+      - A01:2017 - Injection
+      - A03:2021 - Injection
+      references:
+      - https://laravel.com/docs/9.x/validation#rule-unique
+      subcategory:
+      - vuln
+      technology:
+      - php
+      - laravel
+    mode: taint
+    pattern-sinks:
+    - patterns:
+      - pattern: 'Illuminate\Validation\Rule::unique(...)->ignore(...,$IGNORE,...)
+
+          '
+      - focus-metavariable: $IGNORE
+    pattern-sources:
+    - patterns:
+      - pattern: 'public function $F(...,Request $R,...){...}
+
+          '
+      - focus-metavariable: $R
+    - patterns:
+      - pattern-either:
+        - pattern: '$this->$PROPERTY
+
+            '
+        - pattern: '$this->$PROPERTY->$GET
+
+            '
+      - metavariable-pattern:
+          metavariable: $PROPERTY
+          patterns:
+          - pattern-either:
+            - pattern: query
+            - pattern: request
+            - pattern: headers
+            - pattern: cookies
+            - pattern: cookie
+            - pattern: files
+            - pattern: file
+            - pattern: allFiles
+            - pattern: input
+            - pattern: all
+            - pattern: post
+            - pattern: json
+      - pattern-either:
+        - pattern-inside: 'class $CL extends Illuminate\Http\Request {...}
+
+            '
+        - pattern-inside: 'class $CL extends Illuminate\Foundation\Http\FormRequest
+            {...}
+
+            '
+    severity: ERROR
+- rules:
+  - id: laravel-cookie-null-domain
+    languages:
+    - php
+    message: 'Found a configuration file where the domain attribute is not set to
+      null. It is recommended (unless you are using sub-domain route registrations)
+      to set this attribute to null so that only the same origin can set the cookie,
+      thus protecting your cookies. '
+    metadata:
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-200: Exposure of Sensitive Information to an Unauthorized Actor'
+      cwe2021-top25: true
+      impact: LOW
+      likelihood: LOW
+      owasp:
+      - A01:2021 - Broken Access Control
+      references:
+      - https://github.com/OWASP/CheatSheetSeries/blob/master/cheatsheets/Laravel_Cheat_Sheet.md
+      subcategory:
+      - audit
+      technology:
+      - php
+      - laravel
+    paths:
+      include:
+      - '*session.php'
+    patterns:
+    - pattern: '''cookie''
+
+        '
+    - pattern-inside: "return [\n  ...,\n  'cookie' => env(...),\n  ...\n];\n"
+    - pattern-not-inside: "return [\n  ...,\n  'domain' => null,\n  ...\n];\n"
+    - pattern-not-inside: "return [\n  ...,\n  'domain' => env('$NAME', $DEFAULT),\n\
+        \  ...\n];\n"
+    severity: ERROR
+- rules:
+  - id: laravel-cookie-secure-set
+    languages:
+    - php
+    message: 'Found a configuration file where the secure attribute is not set to
+      ''true''. Setting ''secure'' to ''true'' prevents the client from transmitting
+      the cookie over unencrypted channels and therefore prevents cookies from being
+      stolen through man in the middle attacks. '
+    metadata:
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-614: Sensitive Cookie in HTTPS Session Without ''Secure'' Attribute'
+      impact: LOW
+      likelihood: LOW
+      owasp:
+      - A05:2021 - Security Misconfiguration
+      references:
+      - https://github.com/OWASP/CheatSheetSeries/blob/master/cheatsheets/Laravel_Cheat_Sheet.md
+      subcategory:
+      - audit
+      technology:
+      - php
+      - laravel
+    paths:
+      include:
+      - '*session.php'
+    patterns:
+    - pattern: '''cookie''
+
+        '
+    - pattern-inside: "return [\n  ...,\n  'cookie' => env(...),\n  ...\n];\n"
+    - pattern-not-inside: "return [\n  ...,\n  'secure' => true,\n  ...\n];\n"
+    - pattern-not-inside: "return [\n  ...,\n  'secure' => env('$NAME', $DEFAULT),\n\
+        \  ...\n];\n"
+    severity: ERROR
+- rules:
+  - id: laravel-cookie-same-site
+    languages:
+    - php
+    message: Found a configuration file where the same_site attribute is not set to
+      'lax' or 'strict'. Setting 'same_site' to 'lax' or 'strict' restricts cookies
+      to a first-party or same-site context, which will protect your cookies and prevent
+      CSRF.
+    metadata:
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-1275: Sensitive Cookie with Improper SameSite Attribute'
+      impact: LOW
+      likelihood: LOW
+      owasp:
+      - A01:2021 - Broken Access Control
+      references:
+      - https://github.com/OWASP/CheatSheetSeries/blob/master/cheatsheets/Laravel_Cheat_Sheet.md
+      subcategory:
+      - audit
+      technology:
+      - php
+      - laravel
+    paths:
+      include:
+      - '*session.php'
+    patterns:
+    - pattern: '''cookie''
+
+        '
+    - pattern-inside: "return [\n  ...,\n  'cookie' => env(...),\n  ...\n];\n"
+    - pattern-not-inside: "return [\n  ...,\n  'same_site' => 'lax',\n  ...\n];\n"
+    - pattern-not-inside: "return [\n  ...,\n  'same_site' => 'strict',\n  ...\n];\n"
+    - pattern-not-inside: "return [\n  ...,\n  'same_site' => env('$NAME', $DEFAULT),\n\
+        \  ...\n];\n"
+    severity: ERROR
+- rules:
+  - id: laravel-cookie-long-timeout
+    languages:
+    - php
+    message: Found a configuration file where the lifetime attribute is over 30 minutes.
+    metadata:
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-1004: Sensitive Cookie Without ''HttpOnly'' Flag'
+      impact: LOW
+      likelihood: LOW
+      owasp:
+      - A05:2021 - Security Misconfiguration
+      references:
+      - https://github.com/OWASP/CheatSheetSeries/blob/master/cheatsheets/Laravel_Cheat_Sheet.md
+      subcategory:
+      - audit
+      technology:
+      - php
+      - laravel
+    paths:
+      include:
+      - '*session.php'
+    patterns:
+    - pattern: '''lifetime''
+
+        '
+    - pattern-inside: "return [\n  ...,\n  'lifetime' => $TIME,\n  ...\n];\n"
+    - pattern-not-inside: "return [\n  ...,\n  'lifetime' => env(\"$VAR\", $DEFAULT),\n\
+        \  ...\n];\n"
+    - metavariable-comparison:
+        comparison: $TIME > 30
+        metavariable: $TIME
+    severity: ERROR
+- rules:
+  - id: laravel-active-debug-code
+    languages:
+    - php
+    message: Found an instance setting the APP_DEBUG environment variable to true.
+      In your production environment, this should always be false. Otherwise, you
+      risk exposing sensitive configuration values to potential attackers. Instead,
+      set this to false.
+    metadata:
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-489: Active Debug Code'
+      impact: LOW
+      likelihood: LOW
+      owasp:
+      - A05:2021 - Security Misconfiguration
+      references:
+      - https://github.com/OWASP/CheatSheetSeries/blob/master/cheatsheets/Laravel_Cheat_Sheet.md
+      - https://laravel.com/docs/9.x/configuration
+      subcategory:
+      - audit
+      technology:
+      - php
+      - laravel
+    patterns:
+    - pattern-either:
+      - pattern: 'putenv("APP_DEBUG=true")
+
+          '
+      - pattern: 'config([''app.debug'' => ''true''])
+
+          '
+      - pattern: '$_ENV["APP_DEBUG"] = ''true''
+
+          '
+    severity: ERROR
+- rules:
+  - id: laravel-blade-form-missing-csrf
+    languages:
+    - generic
+    message: Detected a form executing a state-changing HTTP method `$METHOD` to route
+      definition `$...ROUTE` without a Laravel CSRF decorator or explicit CSRF token
+      implementation. If this form modifies sensitive state this will open your application
+      to Cross-Site Request Forgery (CSRF) attacks.
+    metadata:
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-352: Cross-Site Request Forgery (CSRF)'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      likelihood: LOW
+      owasp:
+      - A01:2021 - Broken Access Control
+      references:
+      - https://laravel.com/docs/9.x/csrf
+      subcategory:
+      - audit
+      technology:
+      - php
+      - laravel
+      - blade
+    paths:
+      include:
+      - '*.blade.php'
+    patterns:
+    - pattern: 'action="$...ROUTE"
+
+        '
+    - pattern-inside: '<form ... method="$METHOD" ... >
+
+        ...
+
+        '
+    - pattern-not-inside: '<!-- ... ... ... ... ... ... ... -->
+
+        '
+    - metavariable-pattern:
+        language: generic
+        metavariable: $...ROUTE
+        patterns:
+        - pattern-not-regex: \A\s*\Z
+        - pattern-not: '#'
+    - metavariable-regex:
+        metavariable: $METHOD
+        regex: (?i)(post|put|patch|delete)
+    - pattern-not-inside: '<form ...>
+
+        ...
+
+        ...
+
+        ...
+
+        @csrf
+
+        '
+    - pattern-not-inside: '<form ...>
+
+        ...
+
+        ...
+
+        ...
+
+        csrf_field()
+
+        '
+    - pattern-not-inside: '<form ...>
+
+        ...
+
+        ...
+
+        ...
+
+        csrf_token()
+
+        '
+    severity: WARNING

@@ -1,0 +1,863 @@
+- rules:
+  - id: unrestricted-request-mapping
+    languages:
+    - java
+    message: Detected a method annotated with 'RequestMapping' that does not specify
+      the HTTP method. CSRF protections are not enabled for GET, HEAD, TRACE, or OPTIONS,
+      and by default all HTTP methods are allowed when the HTTP method is not explicitly
+      specified. This means that a method that performs state changes could be vulnerable
+      to CSRF attacks. To mitigate, add the 'method' field and specify the HTTP method
+      (such as 'RequestMethod.POST').
+    metadata:
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-352: Cross-Site Request Forgery (CSRF)'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      likelihood: LOW
+      owasp:
+      - A01:2021 - Broken Access Control
+      references:
+      - https://find-sec-bugs.github.io/bugs.htm#SPRING_CSRF_UNRESTRICTED_REQUEST_MAPPING
+      source-rule-url: https://find-sec-bugs.github.io/bugs.htm#SPRING_CSRF_UNRESTRICTED_REQUEST_MAPPING
+      subcategory:
+      - audit
+      technology:
+      - spring
+    patterns:
+    - pattern-inside: '@RequestMapping(...)
+
+        $RETURNTYPE $METHOD(...) { ... }
+
+        '
+    - pattern-not-inside: '@RequestMapping(..., method = $X, ...)
+
+        $RETURNTYPE $METHOD(...) { ... }
+
+        '
+    - pattern: 'RequestMapping
+
+        '
+    severity: WARNING
+- rules:
+  - id: tainted-url-host
+    languages:
+    - java
+    message: User data flows into the host portion of this manually-constructed URL.
+      This could allow an attacker to send data to their own server, potentially exposing
+      sensitive data such as cookies or authorization information sent with this request.
+      They could also probe internal servers or other resources that the server running
+      this code can access. (This is called server-side request forgery, or SSRF.)
+      Do not allow arbitrary hosts. Instead, create an allowlist for approved hosts,
+      hardcode the correct host, or ensure that the user data can only affect the
+      path or parameters.
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-918: Server-Side Request Forgery (SSRF)'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      interfile: true
+      likelihood: MEDIUM
+      owasp:
+      - A10:2021 - Server-Side Request Forgery (SSRF)
+      references:
+      - https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html
+      subcategory:
+      - vuln
+      technology:
+      - java
+      - spring
+    mode: taint
+    options:
+      interfile: true
+    pattern-sinks:
+    - pattern-either:
+      - pattern: new URL($ONEARG)
+      - patterns:
+        - pattern-either:
+          - pattern: '"$URLSTR" + ...
+
+              '
+          - pattern: '"$URLSTR".concat(...)
+
+              '
+          - patterns:
+            - pattern-inside: 'StringBuilder $SB = new StringBuilder("$URLSTR");
+
+                ...
+
+                '
+            - pattern: $SB.append(...)
+          - patterns:
+            - pattern-inside: '$VAR = "$URLSTR";
+
+                ...
+
+                '
+            - pattern: $VAR += ...
+          - patterns:
+            - pattern: String.format("$URLSTR", ...)
+            - pattern-not: String.format("$URLSTR", "...", ...)
+          - patterns:
+            - pattern-inside: 'String $VAR = "$URLSTR";
+
+                ...
+
+                '
+            - pattern: String.format($VAR, ...)
+        - metavariable-regex:
+            metavariable: $URLSTR
+            regex: http(s?)://%(v|s|q).*
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: "$METHODNAME(..., @$REQ(...) $TYPE $SOURCE,...) {\n  ...\n\
+            }\n"
+        - pattern-inside: "$METHODNAME(..., @$REQ $TYPE $SOURCE,...) {\n  ...\n}\n"
+      - metavariable-regex:
+          metavariable: $TYPE
+          regex: ^(?!(Integer|Long|Float|Double|Char|Boolean|int|long|float|double|char|boolean))
+      - metavariable-regex:
+          metavariable: $REQ
+          regex: (RequestBody|PathVariable|RequestParam|RequestHeader|CookieValue|ModelAttribute)
+      - focus-metavariable: $SOURCE
+    severity: ERROR
+- rules:
+  - id: tainted-system-command
+    languages:
+    - java
+    message: 'Detected user input entering a method which executes a system command.
+      This could result in a command injection vulnerability, which allows an attacker
+      to inject an arbitrary system command onto the server. The attacker could download
+      malware onto or steal data from the server. Instead, use ProcessBuilder, separating
+      the command into individual arguments, like this: `new ProcessBuilder("ls",
+      "-al", targetDirectory)`. Further, make sure you hardcode or allowlist the actual
+      command so that attackers can''t run arbitrary commands.'
+    metadata:
+      category: security
+      confidence: HIGH
+      cwe:
+      - 'CWE-78: Improper Neutralization of Special Elements used in an OS Command
+        (''OS Command Injection'')'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: HIGH
+      likelihood: HIGH
+      owasp:
+      - A01:2017 - Injection
+      - A03:2021 - Injection
+      references:
+      - https://www.stackhawk.com/blog/command-injection-java/
+      - https://cheatsheetseries.owasp.org/cheatsheets/OS_Command_Injection_Defense_Cheat_Sheet.html
+      - https://github.com/github/codeql/blob/main/java/ql/src/Security/CWE/CWE-078/ExecUnescaped.java
+      subcategory:
+      - vuln
+      technology:
+      - java
+      - spring
+    mode: taint
+    pattern-propagators:
+    - from: $INPUT
+      label: CONCAT
+      pattern: (StringBuilder $STRB).append($INPUT)
+      requires: INPUT
+      to: $STRB
+    pattern-sinks:
+    - patterns:
+      - pattern-either:
+        - pattern: '(Process $P) = new Process(...);
+
+            '
+        - pattern: '(ProcessBuilder $PB).command(...);
+
+            '
+        - patterns:
+          - pattern-either:
+            - pattern: '(Runtime $R).$EXEC(...);
+
+                '
+            - pattern: 'Runtime.getRuntime(...).$EXEC(...);
+
+                '
+          - metavariable-regex:
+              metavariable: $EXEC
+              regex: (exec|loadLibrary|load)
+        - patterns:
+          - pattern: '(ProcessBuilder $PB).command(...).$ADD(...);
+
+              '
+          - metavariable-regex:
+              metavariable: $ADD
+              regex: (add|addAll)
+        - patterns:
+          - pattern-either:
+            - patterns:
+              - pattern-inside: '$BUILDER = new ProcessBuilder(...);
+
+                  ...
+
+                  '
+              - pattern: $BUILDER.start(...)
+            - pattern: 'new ProcessBuilder(...). ... .start(...);
+
+                '
+      requires: CONCAT
+    pattern-sources:
+    - label: INPUT
+      patterns:
+      - pattern-either:
+        - pattern-inside: "$METHODNAME(..., @$REQ(...) $TYPE $SOURCE,...) {\n  ...\n\
+            }\n"
+        - pattern-inside: "$METHODNAME(..., @$REQ $TYPE $SOURCE,...) {\n  ...\n}\n"
+      - metavariable-regex:
+          metavariable: $TYPE
+          regex: ^(?!(Integer|Long|Float|Double|Char|Boolean|int|long|float|double|char|boolean))
+      - metavariable-regex:
+          metavariable: $REQ
+          regex: (RequestBody|PathVariable|RequestParam|RequestHeader|CookieValue|ModelAttribute)
+      - focus-metavariable: $SOURCE
+    - label: CONCAT
+      patterns:
+      - pattern-either:
+        - pattern: $X + $SOURCE
+        - pattern: $SOURCE + $Y
+        - pattern: String.format("...", ..., $SOURCE, ...)
+        - pattern: String.join("...", ..., $SOURCE, ...)
+        - pattern: (String $STR).concat($SOURCE)
+        - pattern: $SOURCE.concat(...)
+        - pattern: $X += $SOURCE
+        - pattern: $SOURCE += $X
+      requires: INPUT
+    severity: ERROR
+- rules:
+  - id: tainted-sql-string
+    languages:
+    - java
+    message: User data flows into this manually-constructed SQL string. User data
+      can be safely inserted into SQL strings using prepared statements or an object-relational
+      mapper (ORM). Manually-constructed SQL strings is a possible indicator of SQL
+      injection, which could let an attacker steal or manipulate data from the database.
+      Instead, use prepared statements (`connection.PreparedStatement`) or a safe
+      library.
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-89: Improper Neutralization of Special Elements used in an SQL Command
+        (''SQL Injection'')'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      interfile: true
+      likelihood: HIGH
+      owasp:
+      - A01:2017 - Injection
+      - A03:2021 - Injection
+      references:
+      - https://docs.oracle.com/javase/7/docs/api/java/sql/PreparedStatement.html
+      subcategory:
+      - vuln
+      technology:
+      - spring
+    mode: taint
+    options:
+      interfile: true
+      taint_assume_safe_booleans: true
+      taint_assume_safe_numbers: true
+    pattern-sinks:
+    - patterns:
+      - pattern-either:
+        - pattern: '"$SQLSTR" + ...
+
+            '
+        - pattern: '"$SQLSTR".concat(...)
+
+            '
+        - patterns:
+          - pattern-inside: 'StringBuilder $SB = new StringBuilder("$SQLSTR");
+
+              ...
+
+              '
+          - pattern: $SB.append(...)
+        - patterns:
+          - pattern-inside: '$VAR = "$SQLSTR";
+
+              ...
+
+              '
+          - pattern: $VAR += ...
+        - pattern: String.format("$SQLSTR", ...)
+        - patterns:
+          - pattern-inside: 'String $VAR = "$SQLSTR";
+
+              ...
+
+              '
+          - pattern: String.format($VAR, ...)
+      - pattern-not-inside: System.out.println(...)
+      - pattern-not-inside: $LOG.info(...)
+      - pattern-not-inside: $LOG.warn(...)
+      - pattern-not-inside: $LOG.warning(...)
+      - pattern-not-inside: $LOG.debug(...)
+      - pattern-not-inside: $LOG.debugging(...)
+      - pattern-not-inside: $LOG.error(...)
+      - pattern-not-inside: new Exception(...)
+      - pattern-not-inside: throw ...;
+      - metavariable-regex:
+          metavariable: $SQLSTR
+          regex: (?i)(select|delete|insert|create|update|alter|drop)\b
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: "$METHODNAME(..., @$REQ(...) $TYPE $SOURCE,...) {\n  ...\n\
+            }\n"
+        - pattern-inside: "$METHODNAME(..., @$REQ $TYPE $SOURCE,...) {\n  ...\n}\n"
+      - metavariable-regex:
+          metavariable: $REQ
+          regex: (RequestBody|PathVariable|RequestParam|RequestHeader|CookieValue)
+      - metavariable-regex:
+          metavariable: $TYPE
+          regex: ^(?!(Integer|Long|Float|Double|Char|Boolean|int|long|float|double|char|boolean))
+      - focus-metavariable: $SOURCE
+    severity: ERROR
+- rules:
+  - id: tainted-file-path
+    languages:
+    - java
+    message: Detected user input controlling a file path. An attacker could control
+      the location of this file, to include going backwards in the directory with
+      '../'. To address this, ensure that user-controlled variables in file paths
+      are sanitized. You may also consider using a utility method such as org.apache.commons.io.FilenameUtils.getName(...)
+      to only retrieve the file name from the path.
+    metadata:
+      category: security
+      confidence: HIGH
+      cwe:
+      - 'CWE-23: Relative Path Traversal'
+      impact: HIGH
+      interfile: true
+      likelihood: MEDIUM
+      owasp:
+      - A01:2021 - Broken Access Control
+      references:
+      - https://owasp.org/www-community/attacks/Path_Traversal
+      subcategory:
+      - vuln
+      technology:
+      - java
+      - spring
+    mode: taint
+    options:
+      interfile: true
+    pattern-sanitizers:
+    - pattern: org.apache.commons.io.FilenameUtils.getName(...)
+    pattern-sinks:
+    - patterns:
+      - pattern-either:
+        - pattern: new File(...)
+        - pattern: new java.io.File(...)
+        - pattern: new FileReader(...)
+        - pattern: new java.io.FileReader(...)
+        - pattern: new FileInputStream(...)
+        - pattern: new java.io.FileInputStream(...)
+        - pattern: (Paths $PATHS).get(...)
+        - patterns:
+          - pattern: '$CLASS.$FUNC(...)
+
+              '
+          - metavariable-regex:
+              metavariable: $FUNC
+              regex: ^(getResourceAsStream|getResource)$
+        - patterns:
+          - pattern-either:
+            - pattern: new ClassPathResource($FILE, ...)
+            - pattern: ResourceUtils.getFile($FILE, ...)
+            - pattern: new FileOutputStream($FILE, ...)
+            - pattern: new java.io.FileOutputStream($FILE, ...)
+            - pattern: new StreamSource($FILE, ...)
+            - pattern: new javax.xml.transform.StreamSource($FILE, ...)
+            - pattern: FileUtils.openOutputStream($FILE, ...)
+          - focus-metavariable: $FILE
+    pattern-sources:
+    - patterns:
+      - pattern-either:
+        - pattern-inside: "$METHODNAME(..., @$REQ(...) $TYPE $SOURCE,...) {\n  ...\n\
+            }\n"
+        - pattern-inside: "$METHODNAME(..., @$REQ $TYPE $SOURCE,...) {\n  ...\n}\n"
+      - metavariable-regex:
+          metavariable: $TYPE
+          regex: ^(?!(Integer|Long|Float|Double|Char|Boolean|int|long|float|double|char|boolean))
+      - metavariable-regex:
+          metavariable: $REQ
+          regex: (RequestBody|PathVariable|RequestParam|RequestHeader|CookieValue|ModelAttribute)
+      - focus-metavariable: $SOURCE
+    severity: ERROR
+- rules:
+  - id: tainted-html-string
+    languages:
+    - java
+    message: Detected user input flowing into a manually constructed HTML string.
+      You may be accidentally bypassing secure methods of rendering HTML by manually
+      constructing HTML and this could create a cross-site scripting vulnerability,
+      which could let attackers steal sensitive user data. To be sure this is safe,
+      check that the HTML is rendered safely. You can use the OWASP ESAPI encoder
+      if you must render user data.
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-79: Improper Neutralization of Input During Web Page Generation (''Cross-site
+        Scripting'')'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      likelihood: HIGH
+      owasp:
+      - A07:2017 - Cross-Site Scripting (XSS)
+      - A03:2021 - Injection
+      references:
+      - https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html
+      subcategory:
+      - vuln
+      technology:
+      - java
+      - spring
+    mode: taint
+    pattern-propagators:
+    - from: $...TAINTED
+      pattern: (StringBuilder $SB).append($...TAINTED)
+      to: $SB
+    - from: $...TAINTED
+      pattern: $VAR += $...TAINTED
+      to: $VAR
+    pattern-sanitizers:
+    - pattern-either:
+      - pattern: Encode.forHtml(...)
+      - pattern: (PolicyFactory $POLICY).sanitize(...)
+      - pattern: (AntiSamy $AS).scan(...)
+      - pattern: JSoup.clean(...)
+    pattern-sinks:
+    - patterns:
+      - pattern-either:
+        - pattern: new ResponseEntity<>($PAYLOAD, ...)
+        - pattern: new ResponseEntity<$ERROR>($PAYLOAD, ...)
+        - pattern: ResponseEntity. ... .body($PAYLOAD)
+        - patterns:
+          - pattern: 'ResponseEntity.$RESPFUNC($PAYLOAD). ...
+
+              '
+          - metavariable-regex:
+              metavariable: $RESPFUNC
+              regex: ^(ok|of)$
+      - focus-metavariable: $PAYLOAD
+      requires: CONCAT
+    pattern-sources:
+    - label: INPUT
+      patterns:
+      - pattern-either:
+        - pattern-inside: "$METHODNAME(..., @$REQ(...) $TYPE $SOURCE,...) {\n  ...\n\
+            }\n"
+        - pattern-inside: "$METHODNAME(..., @$REQ $TYPE $SOURCE,...) {\n  ...\n}\n"
+      - metavariable-regex:
+          metavariable: $TYPE
+          regex: ^(?!(Integer|Long|Float|Double|Char|Boolean|int|long|float|double|char|boolean))
+      - metavariable-regex:
+          metavariable: $REQ
+          regex: (RequestBody|PathVariable|RequestParam|RequestHeader|CookieValue|ModelAttribute)
+      - focus-metavariable: $SOURCE
+    - by-side-effect: true
+      label: CONCAT
+      patterns:
+      - pattern-either:
+        - pattern: '"$HTMLSTR" + ...
+
+            '
+        - pattern: '"$HTMLSTR".concat(...)
+
+            '
+        - patterns:
+          - pattern-inside: 'StringBuilder $SB = new StringBuilder("$HTMLSTR");
+
+              ...
+
+              '
+          - pattern: $SB.append(...)
+        - patterns:
+          - pattern-inside: '$VAR = "$HTMLSTR";
+
+              ...
+
+              '
+          - pattern: $VAR += ...
+        - pattern: String.format("$HTMLSTR", ...)
+        - patterns:
+          - pattern-inside: 'String $VAR = "$HTMLSTR";
+
+              ...
+
+              '
+          - pattern: String.format($VAR, ...)
+      - metavariable-regex:
+          metavariable: $HTMLSTR
+          regex: ^<\w+
+      requires: INPUT
+    severity: ERROR
+- rules:
+  - id: spring-unvalidated-redirect
+    languages:
+    - java
+    message: Application redirects a user to a destination URL specified by a user
+      supplied parameter that is not validated.
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-601: URL Redirection to Untrusted Site (''Open Redirect'')'
+      impact: MEDIUM
+      likelihood: MEDIUM
+      owasp:
+      - A01:2021 - Broken Access Control
+      references:
+      - https://owasp.org/Top10/A01_2021-Broken_Access_Control
+      source-rule-url: https://find-sec-bugs.github.io/bugs.htm#UNVALIDATED_REDIRECT
+      subcategory:
+      - vuln
+      technology:
+      - spring
+    pattern-either:
+    - pattern: "$X $METHOD(...,String $URL,...) {\n  return \"redirect:\" + $URL;\n\
+        }\n"
+    - pattern: "$X $METHOD(...,String $URL,...) {\n  ...\n  String $REDIR = \"redirect:\"\
+        \ + $URL;\n  ...\n  return $REDIR;\n  ...\n}\n"
+    - pattern: "$X $METHOD(...,String $URL,...) {\n  ...\n  new ModelAndView(\"redirect:\"\
+        \ + $URL);\n  ...\n}\n"
+    - pattern: "$X $METHOD(...,String $URL,...) {\n  ...\n  String $REDIR = \"redirect:\"\
+        \ + $URL;\n  ...\n  new ModelAndView($REDIR);\n  ...\n}"
+    severity: WARNING
+- rules:
+  - id: spring-actuator-dangerous-endpoints-enabled
+    languages:
+    - generic
+    message: Spring Boot Actuators "$...ACTUATORS" are enabled. Depending on the actuators,
+      this can pose a significant security risk. Please double-check if the actuators
+      are needed and properly secured.
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-200: Exposure of Sensitive Information to an Unauthorized Actor'
+      cwe2021-top25: true
+      impact: HIGH
+      likelihood: MEDIUM
+      owasp:
+      - A01:2021 - Broken Access Control
+      references:
+      - https://docs.spring.io/spring-boot/docs/current/reference/html/production-ready-features.html#production-ready-endpoints-exposing-endpoints
+      - https://medium.com/walmartglobaltech/perils-of-spring-boot-actuators-misconfiguration-185c43a0f785
+      - https://blog.maass.xyz/spring-actuator-security-part-1-stealing-secrets-using-spring-actuators
+      subcategory:
+      - vuln
+      technology:
+      - spring
+    options:
+      generic_ellipsis_max_span: 0
+    patterns:
+    - pattern: management.endpoints.web.exposure.include=$...ACTUATORS
+    - metavariable-comparison:
+        comparison: not str($...ACTUATORS) in ["health","*"]
+        metavariable: $...ACTUATORS
+    severity: WARNING
+- rules:
+  - id: spring-actuator-fully-enabled-yaml
+    languages:
+    - yaml
+    message: Spring Boot Actuator is fully enabled. This exposes sensitive endpoints
+      such as /actuator/env, /actuator/logfile, /actuator/heapdump and others. Unless
+      you have Spring Security enabled or another means to protect these endpoints,
+      this functionality is available without authentication, causing a severe security
+      risk.
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-200: Exposure of Sensitive Information to an Unauthorized Actor'
+      cwe2021-top25: true
+      impact: HIGH
+      likelihood: MEDIUM
+      owasp:
+      - A01:2021 - Broken Access Control
+      references:
+      - https://docs.spring.io/spring-boot/docs/current/reference/html/production-ready-features.html#production-ready-endpoints-exposing-endpoints
+      - https://medium.com/walmartglobaltech/perils-of-spring-boot-actuators-misconfiguration-185c43a0f785
+      - https://blog.maass.xyz/spring-actuator-security-part-1-stealing-secrets-using-spring-actuators
+      subcategory:
+      - vuln
+      technology:
+      - spring
+    patterns:
+    - pattern-inside: "management:\n  ...\n  endpoints:\n    ...\n    web:\n     \
+        \ ...\n      exposure:\n        ...\n"
+    - pattern: 'include: "*"
+
+        '
+    severity: WARNING
+- rules:
+  - id: spring-actuator-fully-enabled
+    languages:
+    - generic
+    message: Spring Boot Actuator is fully enabled. This exposes sensitive endpoints
+      such as /actuator/env, /actuator/logfile, /actuator/heapdump and others. Unless
+      you have Spring Security enabled or another means to protect these endpoints,
+      this functionality is available without authentication, causing a significant
+      security risk.
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-200: Exposure of Sensitive Information to an Unauthorized Actor'
+      cwe2021-top25: true
+      impact: HIGH
+      likelihood: MEDIUM
+      owasp:
+      - A01:2021 - Broken Access Control
+      references:
+      - https://docs.spring.io/spring-boot/docs/current/reference/html/production-ready-features.html#production-ready-endpoints-exposing-endpoints
+      - https://medium.com/walmartglobaltech/perils-of-spring-boot-actuators-misconfiguration-185c43a0f785
+      - https://blog.maass.xyz/spring-actuator-security-part-1-stealing-secrets-using-spring-actuators
+      subcategory:
+      - vuln
+      technology:
+      - spring
+    paths:
+      include:
+      - '*properties'
+    pattern: management.endpoints.web.exposure.include=*
+    severity: ERROR
+- rules:
+  - id: spring-csrf-disabled
+    languages:
+    - java
+    message: CSRF protection is disabled for this configuration. This is a security
+      risk.
+    metadata:
+      asvs:
+        control_id: 4.2.2 CSRF
+        control_url: https://github.com/OWASP/ASVS/blob/master/4.0/en/0x12-V4-Access-Control.md#v42-operation-level-access-control
+        section: V4 Access Control
+        version: '4'
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-352: Cross-Site Request Forgery (CSRF)'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      likelihood: LOW
+      owasp:
+      - A01:2021 - Broken Access Control
+      references:
+      - https://owasp.org/Top10/A01_2021-Broken_Access_Control
+      source-rule-url: https://find-sec-bugs.github.io/bugs.htm#SPRING_CSRF_PROTECTION_DISABLED
+      subcategory:
+      - audit
+      technology:
+      - spring
+    pattern: $OBJ.csrf(...).disable(...)
+    severity: WARNING
+- rules:
+  - id: spring-jsp-eval
+    languages:
+    - generic
+    message: A Spring expression is built with a dynamic value. The source of the
+      value(s) should be verified to avoid that unfiltered values fall into this risky
+      code evaluation.
+    metadata:
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code
+        (''Eval Injection'')'
+      impact: MEDIUM
+      likelihood: LOW
+      owasp:
+      - A03:2021 - Injection
+      references:
+      - https://owasp.org/Top10/A03_2021-Injection
+      source-rule-url: https://find-sec-bugs.github.io/bugs.htm#JSP_SPRING_EVAL
+      subcategory:
+      - audit
+      technology:
+      - spring
+    paths:
+      include:
+      - '*.jsp'
+    pattern: '<spring:eval ... expression=...>
+
+      '
+    severity: WARNING
+- rules:
+  - id: spel-injection
+    languages:
+    - java
+    message: A Spring expression is built with a dynamic value. The source of the
+      value(s) should be verified to avoid that unfiltered values fall into this risky
+      code evaluation.
+    metadata:
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-94: Improper Control of Generation of Code (''Code Injection'')'
+      cwe2022-top25: true
+      impact: HIGH
+      likelihood: LOW
+      owasp:
+      - A03:2021 - Injection
+      references:
+      - https://owasp.org/Top10/A03_2021-Injection
+      source-rule-url: https://find-sec-bugs.github.io/bugs.htm#SPEL_INJECTION
+      subcategory:
+      - audit
+      technology:
+      - spring
+    patterns:
+    - pattern-either:
+      - pattern-inside: "class $CLASS {\n  ...\n  ExpressionParser $PARSER;\n  ...\n\
+          }\n"
+      - pattern-inside: "class $CLASS {\n  ...\n  ExpressionParser $PARSER = ...;\n\
+          \  ...\n}\n"
+      - pattern-inside: "$X $METHOD(...) {\n  ...\n  ExpressionParser $PARSER = ...;\n\
+          \  ...\n}\n"
+      - pattern-inside: "class $CLASS {\n  ...\n  SpelExpressionParser $PARSER;\n\
+          \  ...\n}\n"
+      - pattern-inside: "class $CLASS {\n  ...\n  SpelExpressionParser $PARSER = ...;\n\
+          \  ...\n}\n"
+      - pattern-inside: "$X $METHOD(...) {\n  ...\n  SpelExpressionParser $PARSER\
+          \ = ...;\n  ...\n}\n"
+      - pattern-inside: "class $CLASS {\n  ...\n  TemplateAwareExpressionParser $PARSER;\n\
+          \  ...\n}\n"
+      - pattern-inside: "class $CLASS {\n  ...\n  TemplateAwareExpressionParser $PARSER\
+          \ = ...;\n  ...\n}\n"
+      - pattern-inside: "$X $METHOD(...) {\n  ...\n  TemplateAwareExpressionParser\
+          \ $PARSER = ...;\n  ...\n}\n"
+    - pattern: "$X $METHOD(...) {\n  ...\n  $PARSER.parseExpression(...);\n  ...\n\
+        }\n"
+    - pattern-not: "$X $METHOD(...) {\n  ...\n  $PARSER.parseExpression(\"...\");\n\
+        \  ...\n}\n"
+    - pattern-not: "$X $METHOD(...) {\n  ...\n  String $S = \"...\";\n  ...\n  $PARSER.parseExpression($S);\n\
+        \  ...\n}\n"
+    severity: WARNING
+- rules:
+  - id: spring-actuator-dangerous-endpoints-enabled-yaml
+    languages:
+    - yaml
+    message: Spring Boot Actuator "$ACTUATOR" is enabled. Depending on the actuator,
+      this can pose a significant security risk. Please double-check if the actuator
+      is needed and properly secured.
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-200: Exposure of Sensitive Information to an Unauthorized Actor'
+      cwe2021-top25: true
+      impact: HIGH
+      likelihood: MEDIUM
+      owasp:
+      - A01:2021 - Broken Access Control
+      references:
+      - https://docs.spring.io/spring-boot/docs/current/reference/html/production-ready-features.html#production-ready-endpoints-exposing-endpoints
+      - https://medium.com/walmartglobaltech/perils-of-spring-boot-actuators-misconfiguration-185c43a0f785
+      - https://blog.maass.xyz/spring-actuator-security-part-1-stealing-secrets-using-spring-actuators
+      subcategory:
+      - vuln
+      technology:
+      - spring
+    patterns:
+    - pattern-inside: "management:\n  ...\n  endpoints:\n    ...\n    web:\n     \
+        \ ...\n      exposure:\n        ...\n        include:\n          ...\n"
+    - pattern: 'include: [..., $ACTUATOR, ...]
+
+        '
+    - metavariable-comparison:
+        comparison: not str($ACTUATOR) in ["health","*"]
+        metavariable: $ACTUATOR
+    severity: WARNING
+- rules:
+  - id: spring-sqli
+    languages:
+    - java
+    message: Detected a string argument from a public method contract in a raw SQL
+      statement. This could lead to SQL injection if variables in the SQL statement
+      are not properly sanitized. Use a prepared statements (java.sql.PreparedStatement)
+      instead. You can obtain a PreparedStatement using 'connection.prepareStatement'.
+    metadata:
+      category: security
+      confidence: MEDIUM
+      cwe:
+      - 'CWE-89: Improper Neutralization of Special Elements used in an SQL Command
+        (''SQL Injection'')'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      likelihood: MEDIUM
+      owasp:
+      - A01:2017 - Injection
+      - A03:2021 - Injection
+      references:
+      - https://owasp.org/Top10/A03_2021-Injection
+      subcategory:
+      - vuln
+      technology:
+      - spring
+    mode: taint
+    options:
+      taint_assume_safe_booleans: true
+      taint_assume_safe_numbers: true
+    pattern-sanitizers:
+    - not_conflicting: true
+      pattern-either:
+      - patterns:
+        - focus-metavariable: $A
+        - pattern-inside: 'new $TYPE(...,$A,...);
+
+            '
+    pattern-sinks:
+    - patterns:
+      - pattern-either:
+        - patterns:
+          - focus-metavariable: $A
+          - pattern: 'new PreparedStatementCreatorFactory($A,...);
+
+              '
+        - patterns:
+          - focus-metavariable: $A
+          - pattern: '(JdbcTemplate $T).$M($A,...)
+
+              '
+        - patterns:
+          - pattern: (String $A)
+          - pattern-inside: '(JdbcTemplate $T).batchUpdate(...)
+
+              '
+        - patterns:
+          - focus-metavariable: $A
+          - pattern: 'NamedParameterBatchUpdateUtils.$M($A,...)
+
+              '
+        - patterns:
+          - focus-metavariable: $A
+          - pattern: 'BatchUpdateUtils.$M($A,...)
+
+              '
+    pattern-sources:
+    - patterns:
+      - pattern: $ARG
+      - pattern-inside: 'public $T $M (..., String $ARG,...){...}
+
+          '
+    severity: WARNING

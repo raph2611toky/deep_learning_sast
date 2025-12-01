@@ -1,0 +1,128 @@
+- rules:
+  - id: symfony-permissive-cors
+    languages:
+    - php
+    message: Access-Control-Allow-Origin response header is set to "*". This will
+      disable CORS Same Origin Policy restrictions.
+    metadata:
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-346: Origin Validation Error'
+      impact: MEDIUM
+      likelihood: LOW
+      owasp:
+      - A07:2021 - Identification and Authentication Failures
+      references:
+      - https://developer.mozilla.org/ru/docs/Web/HTTP/Headers/Access-Control-Allow-Origin
+      subcategory:
+      - audit
+      technology:
+      - symfony
+    patterns:
+    - pattern-inside: 'use Symfony\Component\HttpFoundation\Response;
+
+        ...
+
+        '
+    - pattern-either:
+      - patterns:
+        - pattern-either:
+          - pattern: 'new Symfony\Component\HttpFoundation\Response($X, $Y, $HEADERS,
+              ...)
+
+              '
+          - pattern: new Response($X, $Y, $HEADERS, ...)
+        - pattern-either:
+          - pattern: new $R($X, $Y, [$KEY => $VALUE], ...)
+          - pattern-inside: '$HEADERS = [$KEY => $VALUE];
+
+              ...
+
+              '
+      - patterns:
+        - pattern: $RES->headers->set($KEY, $VALUE)
+    - metavariable-regex:
+        metavariable: $KEY
+        regex: (\'|\")\s*(Access-Control-Allow-Origin|access-control-allow-origin)\s*(\'|\")
+    - metavariable-regex:
+        metavariable: $VALUE
+        regex: (\'|\")\s*(\*)\s*(\'|\")
+    severity: WARNING
+- rules:
+  - id: symfony-non-literal-redirect
+    languages:
+    - php
+    message: The `redirect()` method does not check its destination in any way. If
+      you redirect to a URL provided by end-users, your application may be open to
+      the unvalidated redirects security vulnerability. Consider using literal values
+      or an allowlist to validate URLs.
+    metadata:
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-601: URL Redirection to Untrusted Site (''Open Redirect'')'
+      impact: MEDIUM
+      likelihood: LOW
+      owasp:
+      - A01:2021 - Broken Access Control
+      references:
+      - https://symfony.com/doc/current/controller.html#redirecting
+      - https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html
+      subcategory:
+      - audit
+      technology:
+      - symfony
+    patterns:
+    - pattern: $this->redirect(...)
+    - pattern-not: $this->redirect("...")
+    - pattern-not: $this->redirect()
+    severity: WARNING
+- rules:
+  - id: symfony-csrf-protection-disabled
+    languages:
+    - php
+    message: CSRF protection is disabled for this configuration. This is a security
+      risk. Make sure that it is safe or consider setting `csrf_protection` property
+      to `true`.
+    metadata:
+      category: security
+      confidence: LOW
+      cwe:
+      - 'CWE-352: Cross-Site Request Forgery (CSRF)'
+      cwe2021-top25: true
+      cwe2022-top25: true
+      impact: MEDIUM
+      likelihood: LOW
+      owasp:
+      - A01:2021 - Broken Access Control
+      references:
+      - https://symfony.com/doc/current/security/csrf.html
+      subcategory:
+      - audit
+      technology:
+      - symfony
+    patterns:
+    - pattern-either:
+      - pattern: $X->createForm($TYPE, $TASK, [..., 'csrf_protection' => false, ...],
+          ...)
+      - pattern: $X->prependExtensionConfig('framework', [..., 'csrf_protection' =>
+          false, ...], ...)
+      - pattern: $X->loadFromExtension('framework', [..., 'csrf_protection' => false,
+          ...], ...)
+      - pattern: $X->setDefaults([..., 'csrf_protection' => false, ...], ...)
+      - patterns:
+        - pattern-either:
+          - pattern: $X->createForm($TYPE, $TASK, [..., 'csrf_protection' => $VAL,
+              ...], ...)
+          - pattern: $X->prependExtensionConfig('framework', [..., 'csrf_protection'
+              => $VAL, ...], ...)
+          - pattern: $X->loadFromExtension('framework', [..., 'csrf_protection' =>
+              $VAL, ...], ...)
+          - pattern: $X->setDefaults([..., 'csrf_protection' => $VAL, ...], ...)
+        - pattern-inside: '$VAL = false;
+
+            ...
+
+            '
+    severity: WARNING

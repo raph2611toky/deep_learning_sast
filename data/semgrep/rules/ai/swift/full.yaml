@@ -1,0 +1,34 @@
+- rules:
+  - id: detect-apple-core-ml
+    languages:
+    - swift
+    message: 'Possibly found usage of AI: Apple CoreML'
+    metadata:
+      category: maintainability
+      confidence: LOW
+      references:
+      - https://semgrep.dev/blog/2024/detecting-shadow-ai
+      technology:
+      - genAI
+      - LLMs
+    pattern-either:
+    - pattern: VNCoreMLModel(...)
+    - pattern: MLModelConfiguration(...)
+    severity: INFO
+- rules:
+  - id: detect-gemini
+    languages:
+    - swift
+    message: 'Possibly found usage of AI: Gemini'
+    metadata:
+      category: maintainability
+      confidence: LOW
+      references:
+      - https://semgrep.dev/blog/2024/detecting-shadow-ai
+      technology:
+      - genAI
+      - LLMs
+    pattern-either:
+    - pattern: import GoogleGenerativeAI
+    - pattern: GenerativeModel(...)
+    severity: INFO

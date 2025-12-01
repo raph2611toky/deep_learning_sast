@@ -1,0 +1,17 @@
+- rules:
+  - id: detect-gemini
+    languages:
+    - kotlin
+    message: 'Possibly found usage of AI: Gemini'
+    metadata:
+      category: maintainability
+      confidence: LOW
+      references:
+      - https://semgrep.dev/blog/2024/detecting-shadow-ai
+      technology:
+      - genAI
+      - LLMs
+    pattern-either:
+    - pattern: import com.google.ai
+    - pattern: GenerativeModel(...)
+    severity: INFO

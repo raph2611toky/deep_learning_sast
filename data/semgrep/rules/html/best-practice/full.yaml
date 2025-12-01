@@ -1,0 +1,14 @@
+- rules:
+  - id: robots-denied
+    languages:
+    - generic
+    message: This page denies crawlers from indexing the page. Remove the robots 'meta'
+      tag.
+    metadata:
+      category: best-practice
+      technology:
+      - html
+    pattern-either:
+    - pattern: <meta name="robots" ...>
+    - pattern: <META NAME="ROBOTS" ...>
+    severity: INFO
