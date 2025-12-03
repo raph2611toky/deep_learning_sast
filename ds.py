@@ -12,38 +12,9 @@ import string
 from sys import argv
 import torch.nn.functional as F
 
-# ====================== COLORAMA (fonctionne parfaitement sur Windows + Linux + Mac) ======================
-from colorama import init, Fore, Style
-init(autoreset=True)  # Auto-reset après chaque print
-
 ##############################################################################################
 #                                       FONCTIONS                                            #
 ##############################################################################################
-
-# ====================== COULEURS ======================
-class c:
-    INFO = Fore.CYAN
-    SUCCESS = Fore.GREEN
-    WARNING = Fore.YELLOW
-    ERROR = Fore.RED
-    OPTIONS = Fore.MAGENTA
-    TITLE = Fore.WHITE + Style.BRIGHT
-    RESET = Style.RESET_ALL
-
-def cprint(msg="", type="info", end='\n'):
-    if type in ["info","i"]:
-        prefix = f"{c.INFO}[INFO]{c.RESET}"
-    elif type in ["success", "s"]:
-        prefix = f"{c.SUCCESS}[SUCCÈS]{c.RESET}"
-    elif type in ["warning", "w"]:
-        prefix = f"{c.WARNING}[WARNING]{c.RESET}"
-    elif type in ["error", "e"]:
-        prefix = f"{c.ERROR}[ERREUR]{c.RESET}"
-    elif type in ["options", "o"]:
-        prefix = f"{c.OPTIONS}[OPTIONS]{c.RESET}"
-    else:
-        prefix = None
-    print(f"{prefix} {msg}" if prefix is not None else msg, end=end)
 
 def load_data(base_path):
     data = []
@@ -143,7 +114,7 @@ def list_directories(path):
         dirs = [d for d in os.listdir(path) if os.path.isdir(os.path.join(path, d))]
         if not dirs:
             return []
-        cprint("Available directories:")
+        print("\nAvailable directories:")
         mur = "+===============================================================+"
         print(mur)
         for i, name in enumerate(dirs, 1):
@@ -153,7 +124,7 @@ def list_directories(path):
         print(mur)
         return dirs
     except FileNotFoundError:
-        cprint("Chemin introuvable.", "e")
+        print("[ERREUR] Chemin introuvable.")
         return []
 
 
@@ -168,9 +139,9 @@ def select_option(options):
             if 0 <= idx < len(options):
                 return options[idx]
             else:
-                cprint("Numéro invalide, réessaie.", "e")
+                print("[ERREUR] Numéro invalide, réessaie.")
         except ValueError:
-            cprint("Entre un nombre valide ou 0 pour retour.", "e")
+            print("[ERREUR] Entre un nombre valide ou 0 pour retour.")
 
 
 def prepare_input(item):
@@ -193,14 +164,14 @@ def analyze_code_dir(model_path, code_dir):
         files.extend(glob.glob(os.path.join(code_dir, "**", ext.upper()), recursive=True))
 
     if not files:
-        cprint("Aucun fichier à analyser trouvé.", "w")
+        print("[INFO] Aucun fichier à analyser trouvé.")
         return []
 
     model = AutoModelForSequenceClassification.from_pretrained(model_path)
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     results = []
 
-    cprint("Analyse de {len(files)} fichiers...\n")
+    print(f"\n[INFO] Analyse de {len(files)} fichiers...\n")
 
     for f in files:
         try:
@@ -271,15 +242,15 @@ class CodeDataset(Dataset):
 
 class DeepSASTModel:
     def __init__(self, model_name, num_labels=2, local_files_only=False):
-        cprint("Chargement modèle : {model_name}")
+        print(f"[INFO] Chargement modèle : {model_name}")
         self.model = AutoModelForSequenceClassification.from_pretrained(
             model_name, num_labels=num_labels, local_files_only=local_files_only, ignore_mismatched_sizes=True
         )
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, local_files_only=local_files_only)
-        cprint("Modèle chargé !", "s")
+        print("[INFO] Modèle chargé !")
 
     def train(self, train_data, val_data):
-        cprint("Début entraînement...")
+        print("[INFO] Début entraînement...")
         training_args = TrainingArguments(
             output_dir="./results",
             eval_strategy="epoch",
@@ -305,13 +276,13 @@ class DeepSASTModel:
         save_path = f"./models/{model_id}"
         self.model.save_pretrained(save_path)
         self.tokenizer.save_pretrained(save_path)
-        cprint("Modèle sauvegardé → {save_path}")
+        print(f"[INFO] Modèle sauvegardé → {save_path}")
 
     def evaluate(self, val_data):
         if len(val_data) == 0:
-            cprint("Pas de données de validation → évaluation ignorée.", "w")
+            print("[INFO] Pas de données de validation → évaluation ignorée.")
             return
-        cprint("Évaluation...")
+        print("[INFO] Évaluation...")
         loader = DataLoader(val_data, batch_size=16)
         preds = []
         labels = []
@@ -333,17 +304,17 @@ class DeepSASTModel:
 
 def train(PROJECT_PATH, LANGUAGE, FRAMEWORK="pure"):
     full_dir = os.path.join(PROJECT_PATH, LANGUAGE, FRAMEWORK if FRAMEWORK != 'full' else '', 'full')
-    cprint(f"Dossier cible → {full_dir}")
+    print(f"[INFO] Dossier cible → {full_dir}")
 
     data = load_data(full_dir)
 
     if not data:
-        cprint(type="e",msg="Aucun échantillon trouvé dans ce dossier (vérifie que les .json ont leurs fichiers correspondants).")
-        cprint('', type='o', end='');input("Appuie sur Entrée pour revenir au menu...")
+        print("[ERREUR] Aucun échantillon trouvé dans ce dossier (vérifie que les .json ont leurs fichiers correspondants).")
+        input("\nAppuie sur Entrée pour revenir au menu...")
         return
 
     pos = sum(1 for x in data if x['label'] == 1)
-    cprint("{len(data)} échantillons chargés ({pos} vulnérables, {len(data)-pos} sûrs)", "s")
+    print(f"[INFO] {len(data)} échantillons chargés ({pos} vulnérables, {len(data)-pos} sûrs)")
 
     train_data, val_data = train_test_split(data, test_size=0.2, random_state=42)
     tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
@@ -353,16 +324,15 @@ def train(PROJECT_PATH, LANGUAGE, FRAMEWORK="pure"):
     model = DeepSASTModel("bert-base-uncased", num_labels=2, local_files_only=False)
     model.train(train_dataset, val_dataset)
     model.evaluate(val_dataset)
-    cprint()
 
 
 def train_with_model_info(model_path, project_path, language, framework="pure"):
     full_dir = os.path.join(project_path, language, framework if framework != 'full' else '', 'full')
-    cprint("Dossier cible → {full_dir}")
+    print(f"[INFO] Dossier cible → {full_dir}")
     data = load_data(full_dir)
     
     if not data:
-        cprint(type="e",msg="Aucun échantillon trouvé dans ce dossier.")
+        print("[ERREUR] Aucun échantillon trouvé dans ce dossier.")
         print(f"[WARNING] Assurer qu'il y a des fichiers .json dans de repertoire → {full_dir} . C'est le seule format accepté pour l'instant, si vous avez des fichiers .yml ou .yaml pour l'evaluation, trasformer les en .json d'abord puis reessayez.")
         input("\n[OPTIONS] Appuie sur Entrée pour revenir au menu...")
         return
@@ -397,7 +367,7 @@ def main():
     ███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████
     """
     print(banner)
-    cprint("Welcome to DeepSAST - Code Security Analysis Tool")
+    print("[INFO] Welcome to DeepSAST - Code Security Analysis Tool")
     print("===============================================")
 
     TOKEN_PRODUCTION = '121246856ab4545644c645e6664f644e46e46f6464e6a479682849e65a6b6b6b'
@@ -411,18 +381,18 @@ def main():
         args = parser.parse_args()
 
         if args.token != TOKEN_PRODUCTION:
-            cprint('Token invalide.', 'e')
+            print('[ERREUR] Token invalide.')
             exit(1)
 
         results = analyze_code_dir(args.model, args.code_dir)
         if args.output_sast:
             with open(args.output_sast, 'w', encoding='utf-8') as f:
                 json.dump(results, f, indent=4, ensure_ascii=False)
-        cprint("Analyse terminée.", "s")
+        print("[INFO] Analyse terminée.")
     else:
-        cprint('Mode développement\n')
+        print('[INFO] Mode développement\n')
         while True:
-            cprint("Available Commands:")
+            print("\nAvailable Commands:")
             print("+==========================+")
             print("| 1 | TRAIN                |")
             print("| 2 | USE MODEL            |")
@@ -440,7 +410,7 @@ def main():
             elif cmd == "1":
                 path = input("\nProject path:\n> ").strip()
                 if not path or not os.path.exists(path):
-                    cprint(type="e",msg="Chemin invalide.")
+                    print("[ERREUR] Chemin invalide.")
                     continue
                 dirs = list_directories(path)
                 if not dirs:
@@ -453,7 +423,7 @@ def main():
                 fw = select_option(fws) or "pure"
                 if fw is None:
                     continue
-                cprint("Lancement entraînement sur {lang}/{fw}...\n")
+                print(f"\n[INFO] Lancement entraînement sur {lang}/{fw}...\n")
                 train(path, lang, fw)
 
             elif cmd == "2":
@@ -477,14 +447,14 @@ def main():
                     status, conf = use_model(choice, code_path)
                     print(f"\n[RÉSULTAT] → {status} (confiance: {conf})")
                 else:
-                    cprint(type="e",msg="Fichier introuvable.")
+                    print("[ERREUR] Fichier introuvable.")
 
             elif cmd == "3":
                 models = [d for d in os.listdir("./models") if os.path.isdir(os.path.join("./models", d))]
                 if not models:
                     print("[WARNING] Aucun modèle.")
                     continue
-                cprint("Modèles disponibles:")
+                print("\nModèles disponibles:")
                 mur = "+===============================================================+"
                 print(mur)
                 for i, name in enumerate(models, 1):
@@ -497,7 +467,7 @@ def main():
                     continue
                 path = input("\nData Project path:\n> ").strip()
                 if not path or not os.path.exists(path):
-                    cprint(type="e",msg="Chemin invalide.")
+                    print("[ERREUR] Chemin invalide.")
                     continue
                 dirs = list_directories(path)
                 if not dirs:
@@ -510,7 +480,7 @@ def main():
                 fw = select_option(fws) or "pure"
                 if fw is None:
                     continue
-                cprint("Fine-tuning {model_dir} sur {lang}/{fw}...")
+                print(f"\n[INFO] Fine-tuning {model_dir} sur {lang}/{fw}...")
                 train_with_model_info(f"./models/{model_dir}", path, lang, fw)
 
 if __name__ == "__main__":
