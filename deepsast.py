@@ -407,7 +407,8 @@ def main():
         parser.add_argument("--model", required=True)
         parser.add_argument("--code-dir", required=True)
         parser.add_argument("--token", required=True)
-        parser.add_argument("--output-sast")
+        parser.add_argument("--output-sast", required=True)
+        parser.add_argument("--output-decision")
         args = parser.parse_args()
 
         if args.token != TOKEN_PRODUCTION:
@@ -418,6 +419,24 @@ def main():
         if args.output_sast:
             with open(args.output_sast, 'w', encoding='utf-8') as f:
                 json.dump(results, f, indent=4, ensure_ascii=False)
+        vuln_count = sum(1 for r in results if r.get("status") == "VULNÉRABLE")
+        total = len([r for r in results if r.get("status") in ["VULNÉRABLE", "SÛR"]])
+        percent = 100.0 if total == 0 else round(((total - vuln_count) / total) * 100, 2)
+        decision = "acceptable"
+        if vuln_count > 0:
+            decision = "non-acceptable"
+
+        decision_obj = {
+            "decision": decision,
+            "percent": percent,
+            "total_files": total,
+            "vulnerable_files": vuln_count
+        }
+
+        if args.output_decision:
+            with open(args.output_decision, "w", encoding="utf-8") as f:
+                json.dump(decision_obj, f, indent=4, ensure_ascii=False)
+        
         cprint("Analyse terminée.", "s")
     else:
         cprint('Mode développement\n')
